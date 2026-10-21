@@ -133,3 +133,18 @@ assert.ok(core.wanted_files().includes("fonts/Carlito-Regular.ttf"), "la fuente 
 conFuente("Source Sans 3").ed.rev();
 assert.deepEqual(core.wanted_files(), [], "Source Sans 3 no pide sustitutas");
 console.log("fuentes de Word: piden su sustituta abierta y se dibujan con ella al llegar: bien");
+
+// La sección del cursor (para las reglas y «Primera página diferente»): tamaño y márgenes en puntos, y si la primera página es distinta.
+{
+  const ed = new core.Editor("es-CL");
+  const sec = () => JSON.parse(ed.state()).section;
+  const s0 = sec();
+  assert.ok(s0.pageW > 100 && s0.pageH > 100, `tamaño de página ${s0.pageW}×${s0.pageH}`);
+  for (const k of ["top", "bottom", "left", "right"]) assert.ok(s0[k] > 0, `margen ${k}: ${s0[k]}`);
+  assert.equal(s0.diffFirst, false);
+  ed.run("layout.differentFirstPage", JSON.stringify({ value: true }));
+  assert.equal(sec().diffFirst, true, "primera página diferente se lee de vuelta");
+  ed.run("layout.margins", JSON.stringify({ left: 100 }));
+  assert.equal(sec().left, 100, "el margen izquierdo cambia");
+  console.log("estado().section: página, márgenes y primera página diferente: bien");
+}
