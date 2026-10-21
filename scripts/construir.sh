@@ -69,6 +69,9 @@ echo "→ datos y licencias"
 cp "$codigo"/assets/fonts/SourceSans3-*.ttf "$codigo"/assets/fonts/SourceSerif4-*.ttf "$paquete/datos/fonts/"
 cp "$codigo"/assets/fonts/OFL-SourceSans3.txt "$codigo"/assets/fonts/OFL-SourceSerif4.txt "$paquete/datos/fonts/"
 cp "$codigo"/assets/hyphenation/en-us.dic "$codigo"/assets/hyphenation/en-us.pat "$paquete/datos/hyphenation/"
+# El diccionario ortográfico en español (RLA-ES, es-CL) con su licencia: el editor lo pide por nombre cuando hay texto en español.
+mkdir -p "$paquete/datos/dic"
+cp "$raiz"/datos/dic/es-CL.aff "$raiz"/datos/dic/es-CL.dic "$raiz"/datos/dic/LICENCIA-es-CL.txt "$raiz"/datos/dic/ORIGEN.md "$paquete/datos/dic/"
 cp "$raiz/LICENCIA.md" "$paquete/LICENCIA.md"
 
 node "$raiz/scripts/manifiesto.mjs" "$paquete" "$version" "$REPO" "$COMMIT" "$wbg"
