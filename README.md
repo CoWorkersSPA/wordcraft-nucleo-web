@@ -17,6 +17,7 @@ con brotli). Se compilan con SIMD128.
   las fuentes, el guionado y las traducciones dejan de ir dentro del wasm y se piden por nombre; fuentes de negrita, cursiva y
   serif, el guionado y el diccionario inglés bajo demanda (`add_data_file`): no bloquean el arranque.
 - `scripts/construir.sh <versión>`: clona, aplica el parche, compila y empaqueta en `salida/`.
+- `scripts/probar.mjs <carpeta del paquete>`: prueba de humo en Node (lo que lee la interfaz de `Editor.state()` y los comandos que lo mueven); el CI la corre sobre cada paquete.
 - `.github/workflows/ci.yml`: lo mismo en CI; con una etiqueta `v<versión>-<n>` publica una release.
 
 ## Construir en local
