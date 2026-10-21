@@ -96,3 +96,40 @@ const igual = (a, b) => a.equals(b);
 assert.ok(igual(pagina("La cassa es grande", "en-US").px, pagina("La cassa es grande", "es-CL").px), "en-US se corrige como español");
 assert.ok(!igual(pagina("La casa es grande", "en-GB").px, pagina("La casa es grande", "en-US").px), "en-GB sigue en inglés");
 console.log("en-US se corrige como español y en-GB sigue en inglés: bien");
+
+// Fuentes de Word (propietarias): el motor las sustituye por una abierta con las mismas métricas y la pide a la página al usarla;
+// cuando llega, el texto se dibuja con ella. Calibri → Carlito, Arial → Liberation Sans, Times New Roman (negrita) → Liberation Serif.
+core.wanted_files(); // lo anterior ya se atendió
+const conFuente = (nombre, negrita = false) => {
+  const ed = new core.Editor("es-CL");
+  ed.run("text.insert", JSON.stringify({ text: "Hamburgefonstiv" }));
+  ed.run("select.all", "{}");
+  ed.run("format.font", JSON.stringify({ name: nombre }));
+  if (negrita) ed.run("format.bold", "{}");
+  ed.rev();
+  return { ed, px: Buffer.from(ed.render_page(0, 2)) };
+};
+for (const [nombre, negrita, archivos] of [
+  ["Calibri", false, ["Carlito-Regular"]],
+  ["Arial", false, ["LiberationSans-Regular"]],
+  ["Times New Roman", true, ["LiberationSerif-Regular", "LiberationSerif-Bold"]],
+  ["Courier New", false, ["LiberationMono-Regular"]],
+  ["Cambria", false, ["Caladea-Regular"]],
+]) {
+  const { ed, px } = conFuente(nombre, negrita);
+  const pedidos = core.wanted_files();
+  for (const a of archivos) assert.ok(pedidos.includes(`fonts/${a}.ttf`), `${nombre} pide ${a}: ${pedidos}`);
+  for (const a of archivos) core.add_lazy_font(readFileSync(join(dir, "datos", "fonts", `${a}.ttf`)));
+  ed.rev();
+  assert.ok(!Buffer.from(ed.render_page(0, 2)).equals(px), `${nombre} se dibuja con la fuente abierta cuando llega`);
+}
+// Un documento en blanco usa la fuente por omisión de Word (Calibri/Aptos), que pide Carlito; uno en Source Sans (la que ya viene) no pide nada.
+core.wanted_files();
+const base = new core.Editor("es-CL");
+base.run("text.insert", JSON.stringify({ text: "Hamburgefonstiv" }));
+base.rev();
+base.render_page(0, 2);
+assert.ok(core.wanted_files().includes("fonts/Carlito-Regular.ttf"), "la fuente por omisión pide Carlito");
+conFuente("Source Sans 3").ed.rev();
+assert.deepEqual(core.wanted_files(), [], "Source Sans 3 no pide sustitutas");
+console.log("fuentes de Word: piden su sustituta abierta y se dibujan con ella al llegar: bien");
