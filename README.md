@@ -5,14 +5,14 @@ maquetación y el rasterizado de páginas detrás de una API de wasm-bindgen (`E
 `state`, `open`, `save`…). La interfaz es HTML (`bff/apps/wordcraft`, Astro + Svelte); aquí solo está lo que hace falta para
 construir y publicar el wasm.
 
-Pesa unos 12 MB (4,5 MB con gzip), frente a los 59 MB del wasm con la interfaz de egui.
+Pesa unos 10,4 MB (3,1 MB con brotli), frente a los 59 MB del wasm con la interfaz de egui. Se compila con SIMD128.
 
 ## Qué hay
 
 - `UPSTREAM`: el commit exacto de wordcraft sobre el que se trabaja.
 - `parche/0001-nucleo-web.patch`: lo que se le agrega a ese commit. Crates nuevos `wordcraft-extdata` y `wordcraft-web-core`;
   las fuentes, el guionado y las traducciones dejan de ir dentro del wasm y se piden por nombre; fuentes de negrita, cursiva y
-  serif bajo demanda.
+  serif, el guionado y el diccionario inglés bajo demanda (`add_data_file`): no bloquean el arranque.
 - `scripts/construir.sh <versión>`: clona, aplica el parche, compila y empaqueta en `salida/`.
 - `.github/workflows/ci.yml`: lo mismo en CI; con una etiqueta `v<versión>-<n>` publica una release.
 

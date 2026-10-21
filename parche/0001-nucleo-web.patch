@@ -517,10 +517,10 @@ index abee190..6b7062d 100644
  miniz_oxide = "0.8"
  
 diff --git a/crates/proof/src/hyphen.rs b/crates/proof/src/hyphen.rs
-index 9fdae03..4bd4e3c 100644
+index 9fdae03..35ed85f 100644
 --- a/crates/proof/src/hyphen.rs
 +++ b/crates/proof/src/hyphen.rs
-@@ -27,25 +27,37 @@ pub use crate::lang::ProofLang;
+@@ -27,55 +27,90 @@ pub use crate::lang::ProofLang;
  pub use dict::Dictionary;
  pub use patterns::Patterns;
  
@@ -533,72 +533,130 @@ index 9fdae03..4bd4e3c 100644
 -/// hyph-utf8's `hyph-it.tex`, unmodified (offered under MIT or LPPL; WordCraft uses MIT, whose
 -/// notice is in the file's header).
 -static IT_PAT: &str = include_str!("../../../assets/hyphenation/it.pat");
-+// Desktop embeds the patterns; the web build gets them from the page (`wordcraft_extdata`).
++// Desktop embeds the patterns; the web build fetches them on first use (`wordcraft_extdata`): until they
++// arrive a lookup gets nothing, the data is requested, and the caller's next pass finds it.
 +#[cfg(not(target_arch = "wasm32"))]
 +macro_rules! asset {
 +    ($f:literal) => {
-+        include_bytes!(concat!("../../../assets/hyphenation/", $f)).as_slice()
++        Some(include_bytes!(concat!("../../../assets/hyphenation/", $f)).as_slice())
 +    };
 +}
 +#[cfg(target_arch = "wasm32")]
 +macro_rules! asset {
-+    ($f:literal) => {
-+        wordcraft_extdata::bytes(concat!("hyphenation/", $f)).unwrap_or(&[])
-+    };
-+}
-+
-+fn en_us_dic() -> &'static [u8] {
-+    asset!("en-us.dic")
++    ($f:literal) => {{
++        let name = concat!("hyphenation/", $f);
++        let bytes = wordcraft_extdata::bytes(name);
++        if bytes.is_none() {
++            wordcraft_extdata::request(name);
++        }
++        bytes
++    }};
 +}
 +
 +fn pattern_text(bytes: &'static [u8]) -> &'static str {
 +    std::str::from_utf8(bytes).unwrap_or("")
 +}
++
++/// Parsed on first use once the data is there; until then (web, not yet fetched) an empty set that
++/// isn't remembered, so the next call parses the real one.
++fn patterns_from(cell: &'static OnceLock<Patterns>, data: Option<&'static [u8]>) -> &'static Patterns {
++    static NONE: OnceLock<Patterns> = OnceLock::new();
++    match data {
++        Some(bytes) => cell.get_or_init(|| Patterns::parse(pattern_text(bytes))),
++        None => cell.get().unwrap_or_else(|| NONE.get_or_init(|| Patterns::parse(""))),
++    }
++}
  
  impl Dictionary {
-     /// The bundled US English dictionary (decoded on first use).
+-    /// The bundled US English dictionary (decoded on first use).
++    /// The bundled US English dictionary (decoded on first use). On the web it is empty until the
++    /// page has fetched it ([`Dictionary::en_us_loaded`]).
      pub fn en_us() -> &'static Dictionary {
          static D: OnceLock<Dictionary> = OnceLock::new();
++        static NONE: OnceLock<Dictionary> = OnceLock::new();
++        if let Some(d) = D.get() {
++            return d;
++        }
++        let Some(bytes) = asset!("en-us.dic").filter(|b| !b.is_empty()) else {
++            return NONE.get_or_init(Dictionary::default);
++        };
          D.get_or_init(|| {
 -            if EN_US_DIC.is_empty() {
-+            if en_us_dic().is_empty() {
-                 return Dictionary::default();
-             }
+-                return Dictionary::default();
+-            }
 -            Dictionary::from_bytes(EN_US_DIC).unwrap_or_else(|e| {
-+            Dictionary::from_bytes(en_us_dic()).unwrap_or_else(|e| {
++            Dictionary::from_bytes(bytes).unwrap_or_else(|e| {
                  log::error!("{e}");
                  Dictionary::default()
              })
-@@ -57,25 +69,25 @@ impl Patterns {
+         })
+     }
++
++    /// Is the US English dictionary there? Always on desktop; on the web, once fetched. Until then
++    /// spelling treats English words as known, so text isn't marked wrong while it loads.
++    pub fn en_us_loaded() -> bool {
++        Dictionary::en_us().len() > 0
++    }
+ }
+ 
+ impl Patterns {
      /// The bundled US English patterns (parsed on first use).
      pub fn en_us() -> &'static Patterns {
          static P: OnceLock<Patterns> = OnceLock::new();
 -        P.get_or_init(|| Patterns::parse(EN_US_PAT))
-+        P.get_or_init(|| Patterns::parse(pattern_text(asset!("en-us.pat"))))
++        patterns_from(&P, asset!("en-us.pat"))
      }
  
      /// The bundled Polish patterns and exception words (parsed on first use).
      pub fn pl() -> &'static Patterns {
          static P: OnceLock<Patterns> = OnceLock::new();
 -        P.get_or_init(|| Patterns::parse(PL_PAT))
-+        P.get_or_init(|| Patterns::parse(pattern_text(asset!("pl.pat"))))
++        patterns_from(&P, asset!("pl.pat"))
      }
  
      /// The bundled Portuguese patterns and exception words (parsed on first use).
      pub fn pt() -> &'static Patterns {
          static P: OnceLock<Patterns> = OnceLock::new();
 -        P.get_or_init(|| Patterns::parse(PT_PAT))
-+        P.get_or_init(|| Patterns::parse(pattern_text(asset!("pt.pat"))))
++        patterns_from(&P, asset!("pt.pat"))
      }
  
      /// The bundled Italian patterns (parsed on first use; the file has no exception words).
      pub fn it() -> &'static Patterns {
          static P: OnceLock<Patterns> = OnceLock::new();
 -        P.get_or_init(|| Patterns::parse(IT_PAT))
-+        P.get_or_init(|| Patterns::parse(pattern_text(asset!("it.pat"))))
++        patterns_from(&P, asset!("it.pat"))
      }
  }
  
+diff --git a/crates/proof/src/lib.rs b/crates/proof/src/lib.rs
+index 5afa42d..1ad28de 100644
+--- a/crates/proof/src/lib.rs
++++ b/crates/proof/src/lib.rs
+@@ -154,6 +154,12 @@ pub fn set_dictionaries_folder(dir: Option<std::path::PathBuf>) {
+     DICTIONARY_GENERATION.fetch_add(1, Ordering::Relaxed);
+ }
+ 
++/// Proofing data arrived from outside (the web page fetched a dictionary or hyphenation patterns):
++/// cached checks and layouts are dropped so text is checked and hyphenated again with it.
++pub fn data_arrived() {
++    DICTIONARY_GENERATION.fetch_add(1, Ordering::Relaxed);
++}
++
+ /// Each language that reads an installed Hunspell dictionary, with the `.dic` file found for it
+ /// now (`None`: not installed, so the language has no spelling marks).
+ pub fn installed_dictionaries() -> Vec<(ProofLang, Option<std::path::PathBuf>)> {
+@@ -323,6 +329,10 @@ fn base_known(d: &dict::Dictionary, w: &str) -> bool {
+ }
+ 
+ fn known_core(w: &str) -> bool {
++    // Web: until the dictionary arrives nothing is marked (it is requested; the next check uses it).
++    if !dict::Dictionary::en_us_loaded() {
++        return true;
++    }
+     let d = dict::Dictionary::en_us();
+     if base_known(d, w) || COMMON.split(' ').any(|c| c == w) {
+         return true;
 diff --git a/crates/ui-egui/Cargo.toml b/crates/ui-egui/Cargo.toml
 index 48ed412..872ffab 100644
 --- a/crates/ui-egui/Cargo.toml
@@ -874,10 +932,10 @@ index 0000000..1b56e49
 +js-sys = "0.3"
 diff --git a/crates/web-core/src/lib.rs b/crates/web-core/src/lib.rs
 new file mode 100644
-index 0000000..94759ba
+index 0000000..3dab64f
 --- /dev/null
 +++ b/crates/web-core/src/lib.rs
-@@ -0,0 +1,193 @@
+@@ -0,0 +1,206 @@
 +//! The editor behind an HTML front end. The page owns the interface (ribbon, dialogs, status bar)
 +//! and the input events; this crate owns the document: it runs engine commands, lays the document
 +//! out and rasterises pages for `<canvas>`, and answers where the caret and selection are.
@@ -906,7 +964,8 @@ index 0000000..94759ba
 +/// Files the page must fetch (under its `assets/` folder) before creating an [`Editor`].
 +#[wasm_bindgen]
 +pub fn core_files() -> Vec<String> {
-+    ["fonts/SourceSans3-Regular.ttf", "hyphenation/en-us.dic", "hyphenation/en-us.pat"].map(String::from).to_vec()
++    // Only the fallback face: hyphenation and the English dictionary come when text first needs them.
++    vec!["fonts/SourceSans3-Regular.ttf".to_string()]
 +}
 +
 +/// Hand over a fetched data file under its asset-relative name.
@@ -921,6 +980,14 @@ index 0000000..94759ba
 +    wordcraft_extdata::take_requests()
 +}
 +
++/// Add a data file the page fetched on request (hyphenation, dictionary): text is checked and
++/// laid out again with it (see [`Editor::rev`]).
++#[wasm_bindgen]
++pub fn add_data_file(name: &str, bytes: Vec<u8>) {
++    wordcraft_extdata::provide(name, bytes);
++    wordcraft_engine::proof::data_arrived();
++}
++
 +/// Add a face the page fetched on request; open documents lay out again (see [`Editor::rev`]).
 +#[wasm_bindgen]
 +pub fn add_lazy_font(bytes: Vec<u8>) -> usize {
@@ -933,6 +1000,7 @@ index 0000000..94759ba
 +    /// Changes whenever something the page shows could have changed.
 +    rev: u64,
 +    fonts: u64,
++    proofing: u64,
 +}
 +
 +#[wasm_bindgen]
@@ -983,8 +1051,10 @@ index 0000000..94759ba
 +    /// Bumps on every change to the document, selection or fonts: redraw when it moves.
 +    pub fn rev(&mut self) -> f64 {
 +        let g = wordcraft_fonts::FontDb::global().generation();
-+        if g != self.fonts {
++        let p = wordcraft_engine::proof::dictionary_generation();
++        if g != self.fonts || p != self.proofing {
 +            self.fonts = g;
++            self.proofing = p;
 +            self.session.relayout();
 +            self.rev += 1;
 +        }
@@ -1067,7 +1137,8 @@ index 0000000..94759ba
 +impl From<Session> for Editor {
 +    fn from(mut session: Session) -> Editor {
 +        let fonts = wordcraft_fonts::FontDb::global().generation();
++        let proofing = wordcraft_engine::proof::dictionary_generation();
 +        let _ = Arc::strong_count(&session.layout());
-+        Editor { session, rev: 1, fonts }
++        Editor { session, rev: 1, fonts, proofing }
 +    }
 +}
