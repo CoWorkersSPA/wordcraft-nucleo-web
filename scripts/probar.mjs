@@ -39,6 +39,16 @@ assert.equal(s.size, 18);
 assert.equal(s.font, "Source Serif 4");
 assert.equal(s.color.toUpperCase(), "C0392B");
 assert.equal(s.align, "center");
+// La alineación es la del primer párrafo de la selección: un triple clic termina al inicio del párrafo siguiente.
+run("caret.docStart");
+run("para.align", { value: "left" });
+run("select.paragraph");
+run("para.align", { value: "right" });
+assert.equal(estado().align, "right", "alineación del párrafo seleccionado, no del siguiente");
+run("caret.docStart");
+run("select.paragraph");
+run("para.align", { value: "center" });
+assert.equal(estado().align, "center");
 run("format.growFont");
 assert.ok(estado().size > 18, "A↑ agranda");
 run("format.shrinkFont");

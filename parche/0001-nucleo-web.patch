@@ -948,10 +948,10 @@ index 0000000..1b56e49
 +js-sys = "0.3"
 diff --git a/crates/web-core/src/lib.rs b/crates/web-core/src/lib.rs
 new file mode 100644
-index 0000000..ed33ae9
+index 0000000..306a580
 --- /dev/null
 +++ b/crates/web-core/src/lib.rs
-@@ -0,0 +1,232 @@
+@@ -0,0 +1,235 @@
 +//! The editor behind an HTML front end. The page owns the interface (ribbon, dialogs, status bar)
 +//! and the input events; this crate owns the document: it runs engine commands, lays the document
 +//! out and rasterises pages for `<canvas>`, and answers where the caret and selection are.
@@ -1136,10 +1136,13 @@ index 0000000..ed33ae9
 +        let pages = self.session.layout().pages.len();
 +        // `format.state` only reads: it is what the desktop ribbon shows. Mixed values come back null.
 +        let f = self.session.run("format.state", &json!({})).unwrap_or(Value::Null);
++        // Del primer párrafo de la selección (como Word): una selección que termina al inicio del párrafo siguiente (un triple
++        // clic) no debe mostrar la alineación de ese.
++        let start = self.session.sel.ordered().0;
 +        let align = self
 +            .session
 +            .doc
-+            .para_at(&self.session.sel.focus)
++            .para_at(&start)
 +            .map(|p| match self.session.doc.styles.resolve_para(&p.props).align {
 +                Align::Left => "left",
 +                Align::Center => "center",
