@@ -44,7 +44,7 @@ rehacerlo), y publicar una etiqueta nueva. Idealmente el parche se ofrece a word
 ## Contenido del paquete
 
 `wordcraft_web_core.js`, `.d.ts` y `_bg.wasm` (el editor); `wordcraft_web_vista.js`, `.d.ts` y `_bg.wasm` (la vista); `datos/fonts` (Source Sans 3 y Source Serif 4, con su licencia OFL),
-`datos/hyphenation` (inglés); `MANIFEST.json` con la suma SHA-256 de cada archivo, el commit de wordcraft y la versión de
+`datos/hyphenation` (inglés), `datos/dic` (diccionario ortográfico en español de Chile, con su licencia); `MANIFEST.json` con la suma SHA-256 de cada archivo, el commit de wordcraft y la versión de
 wasm-bindgen; y `LICENCIA.md`.
 
 ## Licencia

@@ -66,3 +66,25 @@ run("insert.editFooter", { page: 0 });
 assert.equal(estado().story, "footer");
 run("insert.closeHeader");
 console.log("estado(): fuente, tamaño, color, alineación y relato: bien");
+
+// Corrector en español: el texto sin idioma se corrige en español (idioma por omisión) con el diccionario que pide la página;
+// con él cargado, la palabra mal escrita se subraya (la página cambia) y la bien escrita no.
+core.set_default_language("es-CL");
+const pagina = (texto) => {
+  const ed = new core.Editor("es-CL");
+  ed.run("text.insert", JSON.stringify({ text: texto }));
+  ed.rev();
+  return { ed, px: Buffer.from(ed.render_page(0, 2)) };
+};
+const mal = pagina("La cassa es grande");
+const bien = pagina("La casa es grande");
+const pedidos = core.wanted_files();
+assert.ok(pedidos.includes("dic/es-CL.aff") && pedidos.includes("dic/es-CL.dic"), `pide el diccionario: ${pedidos}`);
+for (const n of ["dic/es-CL.aff", "dic/es-CL.dic"]) core.add_data_file(n, readFileSync(join(dir, "datos", n)));
+mal.ed.rev();
+bien.ed.rev();
+const malCon = Buffer.from(mal.ed.render_page(0, 2));
+const bienCon = Buffer.from(bien.ed.render_page(0, 2));
+assert.ok(!malCon.equals(mal.px), "«cassa» se subraya cuando llega el diccionario");
+assert.ok(bienCon.equals(bien.px), "«casa» no se subraya");
+console.log("corrector en español: pide el diccionario, subraya «cassa» y deja «casa»: bien");
