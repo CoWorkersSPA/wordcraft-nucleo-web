@@ -48,6 +48,8 @@ jobs:
             echo "version=0.0.0-${GITHUB_SHA::7}" >> "$GITHUB_OUTPUT"
           fi
       - run: scripts/construir.sh "${{ steps.version.outputs.version }}"
+      - name: Prueba de humo del paquete
+        run: node scripts/probar.mjs "trabajo/wordcraft-nucleo-web-${{ steps.version.outputs.version }}"
       - uses: actions/upload-artifact@v4
         with:
           name: wordcraft-nucleo-web-${{ steps.version.outputs.version }}

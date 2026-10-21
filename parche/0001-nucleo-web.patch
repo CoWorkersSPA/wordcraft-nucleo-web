@@ -948,10 +948,10 @@ index 0000000..1b56e49
 +js-sys = "0.3"
 diff --git a/crates/web-core/src/lib.rs b/crates/web-core/src/lib.rs
 new file mode 100644
-index 0000000..3dab64f
+index 0000000..ed33ae9
 --- /dev/null
 +++ b/crates/web-core/src/lib.rs
-@@ -0,0 +1,206 @@
+@@ -0,0 +1,232 @@
 +//! The editor behind an HTML front end. The page owns the interface (ribbon, dialogs, status bar)
 +//! and the input events; this crate owns the document: it runs engine commands, lays the document
 +//! out and rasterises pages for `<canvas>`, and answers where the caret and selection are.
@@ -970,6 +970,7 @@ index 0000000..3dab64f
 +use serde_json::{Value, json};
 +use wasm_bindgen::prelude::*;
 +use wordcraft_engine::Session;
++use wordcraft_engine::doc::{Align, PartKind, StoryRef};
 +use wordcraft_engine::render::{RenderOptions, render_page};
 +use wordcraft_geom::Region;
 +
@@ -1129,16 +1130,41 @@ index 0000000..3dab64f
 +        Value::Array(rects).to_string()
 +    }
 +
-+    /// What the interface shows: the caret's formatting, undo state, counts.
++    /// What the interface shows: the formatting at the caret (as the styles resolve it, so a heading shows its own font and
++    /// size, not only direct formatting), the paragraph's alignment, where the caret is, undo state, counts.
 +    pub fn state(&mut self) -> String {
-+        let p = self.session.caret_props();
 +        let pages = self.session.layout().pages.len();
++        // `format.state` only reads: it is what the desktop ribbon shows. Mixed values come back null.
++        let f = self.session.run("format.state", &json!({})).unwrap_or(Value::Null);
++        let align = self
++            .session
++            .doc
++            .para_at(&self.session.sel.focus)
++            .map(|p| match self.session.doc.styles.resolve_para(&p.props).align {
++                Align::Left => "left",
++                Align::Center => "center",
++                Align::Right => "right",
++                Align::Justify | Align::Distribute => "justify",
++            })
++            .unwrap_or("left");
++        let story = match self.session.sel.focus.story {
++            StoryRef::Body => "body",
++            StoryRef::Part(id) => match self.session.doc.parts.get(&id).map(|p| &p.kind) {
++                Some(PartKind::Header) => "header",
++                Some(PartKind::Footer) => "footer",
++                _ => "other",
++            },
++        };
 +        json!({
-+            "bold": p.bold.unwrap_or(false),
-+            "italic": p.italic.unwrap_or(false),
-+            "underline": p.underline.is_some(),
-+            "font": p.font,
-+            "size": p.size,
++            "bold": f["bold"],
++            "italic": f["italic"],
++            "underline": f["underline"],
++            "strike": f["strike"],
++            "font": f["font"],
++            "size": f["size"],
++            "color": f["color"],
++            "align": align,
++            "story": story,
 +            "canUndo": self.session.can_undo(),
 +            "canRedo": self.session.can_redo(),
 +            "dirty": self.session.dirty,
