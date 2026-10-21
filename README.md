@@ -2,15 +2,18 @@
 
 El núcleo de [WordCraft](https://github.com/storytold/wordcraft) para el navegador, **sin interfaz de Rust**: el motor, la
 maquetación y el rasterizado de páginas detrás de una API de wasm-bindgen (`Editor`: `run`, `render_page`, `click`, `caret`,
-`state`, `open`, `save`…). La interfaz es HTML (`bff/apps/wordcraft`, Astro + Svelte); aquí solo está lo que hace falta para
+`state`, `open`, `save`…), y un módulo chico de solo vista (`Vista`: abrir un .docx y pintar sus páginas) para el primer
+pintado mientras baja el editor. La interfaz es HTML (`bff/apps/wordcraft`, Astro + Svelte); aquí solo está lo que hace falta para
 construir y publicar el wasm.
 
-Pesa unos 10,4 MB (3,1 MB con brotli), frente a los 59 MB del wasm con la interfaz de egui. Se compila con SIMD128.
+El editor pesa unos 10,4 MB (3,1 MB con brotli), frente a los 59 MB del wasm con la interfaz de egui; la vista, 4,0 MB (1,3 MB
+con brotli). Se compilan con SIMD128.
 
 ## Qué hay
 
 - `UPSTREAM`: el commit exacto de wordcraft sobre el que se trabaja.
-- `parche/0001-nucleo-web.patch`: lo que se le agrega a ese commit. Crates nuevos `wordcraft-extdata` y `wordcraft-web-core`;
+- `parche/0001-nucleo-web.patch`: lo que se le agrega a ese commit. Crates nuevos `wordcraft-extdata`, `wordcraft-web-core` y
+  `wordcraft-web-vista`;
   las fuentes, el guionado y las traducciones dejan de ir dentro del wasm y se piden por nombre; fuentes de negrita, cursiva y
   serif, el guionado y el diccionario inglés bajo demanda (`add_data_file`): no bloquean el arranque.
 - `scripts/construir.sh <versión>`: clona, aplica el parche, compila y empaqueta en `salida/`.
@@ -39,7 +42,7 @@ rehacerlo), y publicar una etiqueta nueva. Idealmente el parche se ofrece a word
 
 ## Contenido del paquete
 
-`wordcraft_web_core.js`, `.d.ts` y `_bg.wasm`; `datos/fonts` (Source Sans 3 y Source Serif 4, con su licencia OFL),
+`wordcraft_web_core.js`, `.d.ts` y `_bg.wasm` (el editor); `wordcraft_web_vista.js`, `.d.ts` y `_bg.wasm` (la vista); `datos/fonts` (Source Sans 3 y Source Serif 4, con su licencia OFL),
 `datos/hyphenation` (inglés); `MANIFEST.json` con la suma SHA-256 de cada archivo, el commit de wordcraft y la versión de
 wasm-bindgen; y `LICENCIA.md`.
 

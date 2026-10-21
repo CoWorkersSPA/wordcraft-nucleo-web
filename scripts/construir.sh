@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
-# Construye el núcleo web de WordCraft: clona wordcraft en el commit de UPSTREAM, le aplica parche/, compila el crate
-# `wordcraft-web-core` a wasm y deja en salida/ un .tar.gz con el núcleo (wasm + JS + tipos) y los datos que pide por nombre
-# (fuentes, guionado), más su suma SHA-256.
+# Construye el núcleo web de WordCraft: clona wordcraft en el commit de UPSTREAM, le aplica parche/, compila a wasm los crates
+# `wordcraft-web-core` (el editor) y `wordcraft-web-vista` (solo abrir y pintar un .docx, para el primer pintado) y deja en
+# salida/ un .tar.gz con los dos módulos (wasm + JS + tipos) y los datos que piden por nombre (fuentes, guionado), más su suma
+# SHA-256.
 #
 #   scripts/construir.sh <versión>        p. ej. scripts/construir.sh 0.9.0-1
 #
@@ -51,15 +52,17 @@ echo "→ cargo build (tamaño: opt-level z, LTO completo, panic abort; SIMD128)
     CARGO_PROFILE_RELEASE_CODEGEN_UNITS=1 CARGO_PROFILE_RELEASE_PANIC=abort
   # SIMD128 (todos los navegadores actuales): el rasterizador usa instrucciones vectoriales y el wasm sale ~12 % más chico.
   export RUSTFLAGS="${RUSTFLAGS:-} -C target-feature=+simd128"
-  cargo build --release --locked --target wasm32-unknown-unknown -p wordcraft-web-core
+  cargo build --release --locked --target wasm32-unknown-unknown -p wordcraft-web-core -p wordcraft-web-vista
 )
 
 echo "→ wasm-bindgen y wasm-opt"
 mkdir -p "$paquete/datos/fonts" "$paquete/datos/hyphenation"
-wasm-bindgen --target web --typescript --out-dir "$paquete" \
-  "$codigo/target/wasm32-unknown-unknown/release/wordcraft_web_core.wasm"
-wasm-opt -Oz --all-features -o "$paquete/o.wasm" "$paquete/wordcraft_web_core_bg.wasm"
-mv "$paquete/o.wasm" "$paquete/wordcraft_web_core_bg.wasm"
+for modulo in wordcraft_web_core wordcraft_web_vista; do
+  wasm-bindgen --target web --typescript --out-dir "$paquete" \
+    "$codigo/target/wasm32-unknown-unknown/release/$modulo.wasm"
+  wasm-opt -Oz --all-features -o "$paquete/o.wasm" "$paquete/${modulo}_bg.wasm"
+  mv "$paquete/o.wasm" "$paquete/${modulo}_bg.wasm"
+done
 
 echo "→ datos y licencias"
 # Las fuentes que el núcleo pide por nombre (FALLBACK y las de negrita, cursiva y serif) y el guionado en inglés.

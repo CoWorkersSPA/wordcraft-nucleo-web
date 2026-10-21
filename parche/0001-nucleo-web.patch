@@ -1,5 +1,5 @@
 diff --git a/Cargo.lock b/Cargo.lock
-index 31028fe..b37e62c 100644
+index 31028fe..0372ad4 100644
 --- a/Cargo.lock
 +++ b/Cargo.lock
 @@ -5141,6 +5141,7 @@ dependencies = [
@@ -53,7 +53,7 @@ index 31028fe..b37e62c 100644
   "wordcraft-fonts",
   "wordcraft-geom",
   "wordcraft-layout",
-@@ -5420,10 +5429,25 @@ dependencies = [
+@@ -5420,10 +5429,40 @@ dependencies = [
   "web-sys",
   "wordcraft-doc",
   "wordcraft-engine",
@@ -76,23 +76,39 @@ index 31028fe..b37e62c 100644
 + "wordcraft-geom",
 +]
 +
++[[package]]
++name = "wordcraft-web-vista"
++version = "0.9.0"
++dependencies = [
++ "wasm-bindgen",
++ "wordcraft-doc",
++ "wordcraft-docx",
++ "wordcraft-extdata",
++ "wordcraft-fonts",
++ "wordcraft-geom",
++ "wordcraft-layout",
++ "wordcraft-proof",
++ "wordcraft-render",
++]
++
  [[package]]
  name = "wordcraft-zotero"
  version = "0.9.0"
 diff --git a/Cargo.toml b/Cargo.toml
-index 3cba530..f80baf7 100644
+index 3cba530..c9d60fb 100644
 --- a/Cargo.toml
 +++ b/Cargo.toml
-@@ -13,6 +13,8 @@ repository = "https://github.com/storytold/wordcraft"
+@@ -13,6 +13,9 @@ repository = "https://github.com/storytold/wordcraft"
  [workspace.dependencies]
  # internal
  wordcraft-geom = { path = "crates/geom" }
 +wordcraft-extdata = { path = "crates/extdata" }
 +wordcraft-web-core = { path = "crates/web-core" }
++wordcraft-web-vista = { path = "crates/web-vista" }
  wordcraft-doc = { path = "crates/doc" }
  wordcraft-fonts = { path = "crates/fonts" }
  wordcraft-layout = { path = "crates/layout" }
-@@ -51,7 +53,7 @@ harfrust = "0.13"
+@@ -51,7 +54,7 @@ harfrust = "0.13"
  # (brotli-decompressor, flate2) are already in the tree.
  wuff = "0.2.9"
  vello_cpu = "0.2"
@@ -517,7 +533,7 @@ index abee190..6b7062d 100644
  miniz_oxide = "0.8"
  
 diff --git a/crates/proof/src/hyphen.rs b/crates/proof/src/hyphen.rs
-index 9fdae03..35ed85f 100644
+index 9fdae03..07e5a1a 100644
 --- a/crates/proof/src/hyphen.rs
 +++ b/crates/proof/src/hyphen.rs
 @@ -27,55 +27,90 @@ pub use crate::lang::ProofLang;
@@ -595,7 +611,7 @@ index 9fdae03..35ed85f 100644
 +    /// Is the US English dictionary there? Always on desktop; on the web, once fetched. Until then
 +    /// spelling treats English words as known, so text isn't marked wrong while it loads.
 +    pub fn en_us_loaded() -> bool {
-+        Dictionary::en_us().len() > 0
++        !Dictionary::en_us().is_empty()
 +    }
  }
  
@@ -1140,5 +1156,195 @@ index 0000000..3dab64f
 +        let proofing = wordcraft_engine::proof::dictionary_generation();
 +        let _ = Arc::strong_count(&session.layout());
 +        Editor { session, rev: 1, fonts, proofing }
++    }
++}
+diff --git a/crates/web-vista/Cargo.toml b/crates/web-vista/Cargo.toml
+new file mode 100644
+index 0000000..bb832dc
+--- /dev/null
++++ b/crates/web-vista/Cargo.toml
+@@ -0,0 +1,26 @@
++[package]
++name = "wordcraft-web-vista"
++description = "A small WordCraft for the browser's first paint: opens a Word document, lays it out and rasterises its pages, with no editing engine (wordcraft-web-core takes over once loaded)"
++version.workspace = true
++edition.workspace = true
++license.workspace = true
++publish = false
++
++[lib]
++crate-type = ["cdylib", "rlib"]
++
++[lints]
++workspace = true
++
++[dependencies]
++wordcraft-doc = { workspace = true }
++wordcraft-docx = { workspace = true }
++wordcraft-layout = { workspace = true }
++wordcraft-render = { workspace = true }
++wordcraft-fonts = { workspace = true }
++wordcraft-proof = { workspace = true }
++wordcraft-extdata = { workspace = true }
++wordcraft-geom = { workspace = true }
++
++[target.'cfg(target_arch = "wasm32")'.dependencies]
++wasm-bindgen = "0.2"
+diff --git a/crates/web-vista/src/lib.rs b/crates/web-vista/src/lib.rs
+new file mode 100644
+index 0000000..7417071
+--- /dev/null
++++ b/crates/web-vista/src/lib.rs
+@@ -0,0 +1,152 @@
++//! The first paint of a Word document in the browser, before the editor arrives. It opens a
++//! `.docx`, lays it out and rasterises pages for `<canvas>`, the same way `wordcraft-web-core`
++//! does, but without the editing engine and the other formats: the page shows the document with
++//! this small module and swaps to `Editor` once that one has loaded.
++//!
++//! Data files work as in `wordcraft-web-core`: the page fetches [`core_files`], and the faces and
++//! hyphenation text asks for later are listed by [`wanted_files`].
++#![cfg(target_arch = "wasm32")]
++#![deny(clippy::unwrap_used, clippy::expect_used, clippy::panic)]
++
++use std::sync::Arc;
++
++use wasm_bindgen::prelude::*;
++use wordcraft_doc::Document;
++use wordcraft_geom::Region;
++use wordcraft_layout::{DocLayout, LayoutCache, LayoutOptions};
++use wordcraft_render::{RenderOptions, render_page};
++
++/// Files the page must fetch (under its `assets/` folder) before creating a [`Vista`].
++#[wasm_bindgen]
++pub fn core_files() -> Vec<String> {
++    vec!["fonts/SourceSans3-Regular.ttf".to_string()]
++}
++
++/// Hand over a fetched data file under its asset-relative name.
++#[wasm_bindgen]
++pub fn provide_file(name: &str, bytes: Vec<u8>) {
++    wordcraft_extdata::provide(name, bytes);
++}
++
++/// Files the layout asked for since the last call (faces a document uses, hyphenation).
++#[wasm_bindgen]
++pub fn wanted_files() -> Vec<String> {
++    wordcraft_extdata::take_requests()
++}
++
++/// Add a data file the page fetched on request (hyphenation): the document lays out again.
++#[wasm_bindgen]
++pub fn add_data_file(name: &str, bytes: Vec<u8>) {
++    wordcraft_extdata::provide(name, bytes);
++    wordcraft_proof::data_arrived();
++}
++
++/// Add a face the page fetched on request; the document lays out again (see [`Vista::rev`]).
++#[wasm_bindgen]
++pub fn add_lazy_font(bytes: Vec<u8>) -> usize {
++    wordcraft_fonts::FontDb::global().add_lazy_bundled(bytes)
++}
++
++/// Whether [`Vista::open`] reads a file of this name; other formats wait for the editor.
++#[wasm_bindgen]
++pub fn opens(name: &str) -> bool {
++    let ext = name.rsplit_once('.').map(|(_, e)| e.to_ascii_lowercase()).unwrap_or_default();
++    matches!(ext.as_str(), "docx" | "docm" | "dotx" | "dotm")
++}
++
++#[wasm_bindgen]
++pub struct Vista {
++    doc: Document,
++    cache: LayoutCache,
++    layout: Option<Arc<DocLayout>>,
++    rev: u64,
++    fonts: u64,
++    proofing: u64,
++}
++
++#[wasm_bindgen]
++impl Vista {
++    /// A blank document on the paper of `locale` (`es-CL`: Letter), as the editor's.
++    #[wasm_bindgen(constructor)]
++    pub fn new(locale: &str) -> Vista {
++        let mut doc = Document::new();
++        let (_, w, h) = Region::from_tag(locale).paper();
++        doc.last_section.page_w = w;
++        doc.last_section.page_h = h;
++        Vista::from(doc)
++    }
++
++    /// Replace the document with a Word file (see [`opens`]). Encrypted files are left to the editor.
++    pub fn open(&mut self, name: &str, bytes: &[u8]) -> Result<(), JsError> {
++        if !opens(name) || wordcraft_docx::is_encrypted(bytes) {
++            return Err(JsError::new("format"));
++        }
++        let mut doc = wordcraft_docx::read(bytes).map_err(|e| JsError::new(&e.to_string()))?;
++        doc.ensure_nonempty();
++        let files: Vec<(Vec<u8>, String)> = wordcraft_docx::embedded_fonts(&doc)
++            .into_iter()
++            .filter_map(|f| wordcraft_fonts::decode_font_file(&f.data).ok().map(|data| (data, f.name)))
++            .collect();
++        if !files.is_empty() {
++            wordcraft_fonts::FontDb::global().add_document_fonts(files);
++        }
++        let rev = self.rev + 1;
++        *self = Vista::from(doc);
++        self.rev = rev;
++        Ok(())
++    }
++
++    /// Bumps when what the page shows could have changed (a face or hyphenation arrived).
++    pub fn rev(&mut self) -> f64 {
++        let g = wordcraft_fonts::FontDb::global().generation();
++        let p = wordcraft_proof::dictionary_generation();
++        if g != self.fonts || p != self.proofing {
++            self.fonts = g;
++            self.proofing = p;
++            self.layout = None;
++            self.cache = LayoutCache::default();
++            self.rev += 1;
++        }
++        self.rev as f64
++    }
++
++    pub fn page_count(&mut self) -> usize {
++        self.layout().pages.len()
++    }
++
++    /// `[width, height]` of a page in points.
++    pub fn page_size(&mut self, page: usize) -> Vec<f32> {
++        self.layout().pages.get(page).map(|p| vec![p.w, p.h]).unwrap_or_default()
++    }
++
++    /// The page as straight RGBA, `ceil(width * scale)` pixels wide (`ImageData` order).
++    pub fn render_page(&mut self, page: usize, scale: f32) -> Vec<u8> {
++        let layout = self.layout();
++        let Some(p) = layout.pages.get(page) else { return Vec::new() };
++        render_page(&self.doc, p, scale, &RenderOptions::default()).to_straight()
++    }
++}
++
++impl Vista {
++    fn layout(&mut self) -> Arc<DocLayout> {
++        if let Some(l) = &self.layout {
++            return l.clone();
++        }
++        let l = Arc::new(wordcraft_layout::layout(&self.doc, &mut self.cache, &LayoutOptions::default()));
++        self.layout = Some(l.clone());
++        l
++    }
++}
++
++impl From<Document> for Vista {
++    fn from(doc: Document) -> Vista {
++        Vista {
++            doc,
++            cache: LayoutCache::default(),
++            layout: None,
++            rev: 1,
++            fonts: wordcraft_fonts::FontDb::global().generation(),
++            proofing: wordcraft_proof::dictionary_generation(),
++        }
 +    }
 +}
