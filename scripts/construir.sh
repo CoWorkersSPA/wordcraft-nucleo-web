@@ -59,7 +59,7 @@ echo "→ wasm-bindgen y wasm-opt"
 mkdir -p "$paquete/datos/fonts" "$paquete/datos/hyphenation"
 for modulo in wordcraft_web_core wordcraft_web_vista; do
   wasm-bindgen --target web --typescript --out-dir "$paquete" \
-    "$codigo/target/wasm32-unknown-unknown/release/$modulo.wasm"
+    "${CARGO_TARGET_DIR:-$codigo/target}/wasm32-unknown-unknown/release/$modulo.wasm"
   wasm-opt -Oz --all-features -o "$paquete/o.wasm" "$paquete/${modulo}_bg.wasm"
   mv "$paquete/o.wasm" "$paquete/${modulo}_bg.wasm"
 done
@@ -68,6 +68,8 @@ echo "→ datos y licencias"
 # Las fuentes que el núcleo pide por nombre (FALLBACK y las de negrita, cursiva y serif) y el guionado en inglés.
 cp "$codigo"/assets/fonts/SourceSans3-*.ttf "$codigo"/assets/fonts/SourceSerif4-*.ttf "$paquete/datos/fonts/"
 cp "$codigo"/assets/fonts/OFL-SourceSans3.txt "$codigo"/assets/fonts/OFL-SourceSerif4.txt "$paquete/datos/fonts/"
+# Las fuentes abiertas que sustituyen a las de Word (Calibri, Arial, Times…): el núcleo las pide al usarlas (datos/fonts/ORIGEN.md).
+cp "$raiz"/datos/fonts/* "$paquete/datos/fonts/"
 cp "$codigo"/assets/hyphenation/en-us.dic "$codigo"/assets/hyphenation/en-us.pat "$paquete/datos/hyphenation/"
 # El diccionario ortográfico en español (RLA-ES, es-CL) con su licencia: el editor lo pide por nombre cuando hay texto en español.
 mkdir -p "$paquete/datos/dic"

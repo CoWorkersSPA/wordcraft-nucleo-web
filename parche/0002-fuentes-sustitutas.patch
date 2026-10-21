@@ -1,0 +1,41 @@
+diff --git a/crates/fonts/src/word.rs b/crates/fonts/src/word.rs
+index 69a7034..7145bc2 100644
+--- a/crates/fonts/src/word.rs
++++ b/crates/fonts/src/word.rs
+@@ -280,6 +280,27 @@ fn is_hebrew(f: &str) -> bool {
+     NAMES.contains(&f) || f.contains("hebrew")
+ }
+ 
++/// Web: ask the page for the open font files that would stand in for `family` (the first of its [`substitutes`] the page ships:
++/// Carlito for Calibri and the sans families, Caladea for Cambria and the serif ones, Liberation for Arial / Times / Courier). The
++/// page fetches them and calls [`FontDb::add_lazy_bundled`]; layouts redraw with them ([`FontDb::generation`]). The regular face
++/// always, the bold / italic ones only when the text uses them.
++#[cfg(target_arch = "wasm32")]
++fn want_substitute(family: &str, bold: bool, italic: bool) {
++    const SHIPPED: &[(&str, &str)] = &[("Carlito", "Carlito"), ("Caladea", "Caladea"), ("Liberation Sans", "LiberationSans"), ("Liberation Serif", "LiberationSerif"), ("Liberation Mono", "LiberationMono")];
++    let Some(prefix) = substitutes(family).iter().find_map(|s| SHIPPED.iter().find(|(n, _)| n == s)).map(|(_, p)| *p) else {
++        return;
++    };
++    let style = match (bold, italic) {
++        (false, false) => None,
++        (true, false) => Some("Bold"),
++        (false, true) => Some("Italic"),
++        (true, true) => Some("BoldItalic"),
++    };
++    for face in std::iter::once("Regular").chain(style) {
++        wordcraft_extdata::request(&format!("fonts/{prefix}-{face}.ttf"));
++    }
++}
++
+ /// The first installed substitute for a missing `family`. For a Thai font, the first with Latin
+ /// letters and digits as well as Thai ones (a Thai face without Latin would leave a mixed run in
+ /// two fonts, #1549), else the first with Thai letters, else the first installed.
+@@ -346,6 +367,8 @@ pub fn resolve(family: &str, bold: bool, italic: bool) -> Resolved {
+         // Windows maps the charset names to the font itself: not a substitution.
+         (base.to_string(), false)
+     } else {
++        #[cfg(target_arch = "wasm32")]
++        want_substitute(base, bold, italic);
+         (substitute(db, base).unwrap_or(crate::FALLBACK_FAMILY).to_string(), true)
+     };
+     let face = db.face(&fam, style_name(bold, italic));
