@@ -70,8 +70,8 @@ console.log("estado(): fuente, tamaño, color, alineación y relato: bien");
 // Corrector en español: el texto sin idioma se corrige en español (idioma por omisión) con el diccionario que pide la página;
 // con él cargado, la palabra mal escrita se subraya (la página cambia) y la bien escrita no.
 core.set_default_language("es-CL");
-const pagina = (texto) => {
-  const ed = new core.Editor("es-CL");
+const pagina = (texto, locale = "es-CL") => {
+  const ed = new core.Editor(locale);
   ed.run("text.insert", JSON.stringify({ text: texto }));
   ed.rev();
   return { ed, px: Buffer.from(ed.render_page(0, 2)) };
@@ -88,3 +88,11 @@ const bienCon = Buffer.from(bien.ed.render_page(0, 2));
 assert.ok(!malCon.equals(mal.px), "«cassa» se subraya cuando llega el diccionario");
 assert.ok(bienCon.equals(bien.px), "«casa» no se subraya");
 console.log("corrector en español: pide el diccionario, subraya «cassa» y deja «casa»: bien");
+
+// Un documento en en-US (el idioma que traía todo documento nuevo, y el de Word por omisión) se corrige como español:
+// con el mismo texto con error se ve igual que uno en es-CL. Uno en en-GB, que alguien eligió, sigue en inglés: el inglés
+// no conoce «casa» y la subraya, el español no.
+const igual = (a, b) => a.equals(b);
+assert.ok(igual(pagina("La cassa es grande", "en-US").px, pagina("La cassa es grande", "es-CL").px), "en-US se corrige como español");
+assert.ok(!igual(pagina("La casa es grande", "en-GB").px, pagina("La casa es grande", "en-US").px), "en-GB sigue en inglés");
+console.log("en-US se corrige como español y en-GB sigue en inglés: bien");

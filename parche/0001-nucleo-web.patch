@@ -1122,7 +1122,7 @@ index 9fdae03..07e5a1a 100644
  }
  
 diff --git a/crates/proof/src/lang.rs b/crates/proof/src/lang.rs
-index 6129d03..3b13988 100644
+index 6129d03..fb87256 100644
 --- a/crates/proof/src/lang.rs
 +++ b/crates/proof/src/lang.rs
 @@ -39,6 +39,10 @@ pub enum ProofLang {
@@ -1136,7 +1136,7 @@ index 6129d03..3b13988 100644
      /// A language without proofing tools here (`fr-FR`, `ja-JP`, `x-none`…). Like Word without
      /// the language's proofing tools: no spelling or grammar marks, so its words are never
      /// flagged as English misspellings. Hyphenation keeps using the English patterns, as before
-@@ -48,13 +52,14 @@ pub enum ProofLang {
+@@ -48,15 +52,21 @@ pub enum ProofLang {
  
  impl ProofLang {
      /// Every language with a spelling dictionary, in display order.
@@ -1148,14 +1148,22 @@ index 6129d03..3b13988 100644
      /// The proofing language of a BCP 47 tag (`pl-PL`, `en_GB`, `PL`…). Only the primary subtag
 -    /// counts. No tag (or an empty one) is English, WordCraft's default editing language.
 +    /// counts. No tag (or an empty one) is the default editing language ([`set_default_language`]):
-+    /// English, unless the front end says otherwise.
++    /// English, unless the front end says otherwise. The same goes for plain `en-US`, which is what a
++    /// new document says when nobody chose a language (WordCraft's and Word's default): it follows the
++    /// default language too, so it is English by default and Spanish on the web. Any other English
++    /// tag (`en-GB`, `en-AU`…) is a choice and stays English.
      pub fn from_tag(tag: Option<&str>) -> ProofLang {
 -        let Some(tag) = tag.map(str::trim).filter(|t| !t.is_empty()) else { return ProofLang::En };
 +        let Some(tag) = tag.map(str::trim).filter(|t| !t.is_empty()) else { return default_language() };
          let primary = tag.split(['-', '_']).next().unwrap_or("");
-         if primary.eq_ignore_ascii_case("en") || primary.eq_ignore_ascii_case("eng") {
+-        if primary.eq_ignore_ascii_case("en") || primary.eq_ignore_ascii_case("eng") {
++        if is_us_english(tag) {
++            default_language()
++        } else if primary.eq_ignore_ascii_case("en") || primary.eq_ignore_ascii_case("eng") {
              ProofLang::En
-@@ -76,6 +81,8 @@ impl ProofLang {
+         } else if primary.eq_ignore_ascii_case("pl") || primary.eq_ignore_ascii_case("pol") {
+             ProofLang::Pl
+@@ -76,6 +86,8 @@ impl ProofLang {
              ProofLang::Cs
          } else if primary.eq_ignore_ascii_case("id") || primary.eq_ignore_ascii_case("ind") || primary.eq_ignore_ascii_case("in") {
              ProofLang::Id
@@ -1164,7 +1172,7 @@ index 6129d03..3b13988 100644
          } else {
              ProofLang::Other
          }
-@@ -94,6 +101,7 @@ impl ProofLang {
+@@ -94,6 +106,7 @@ impl ProofLang {
              ProofLang::Ru => "ru",
              ProofLang::Cs => "cs",
              ProofLang::Id => "id",
@@ -1172,10 +1180,16 @@ index 6129d03..3b13988 100644
              ProofLang::Other => "",
          }
      }
-@@ -104,6 +112,21 @@ impl ProofLang {
+@@ -104,6 +117,28 @@ impl ProofLang {
      }
  }
  
++/// Is `tag` plain US English (`en`, `en-US`, `en_US`), the language a document has when none was chosen?
++fn is_us_english(tag: &str) -> bool {
++    let mut parts = tag.split(['-', '_']);
++    parts.next().is_some_and(|p| p.eq_ignore_ascii_case("en")) && parts.next().is_none_or(|r| r.eq_ignore_ascii_case("us")) && parts.next().is_none()
++}
++
 +/// The language of text that has none (no `w:lang` anywhere): English, WordCraft's default editing
 +/// language like Word's, until the front end sets another one.
 +static DEFAULT_LANGUAGE: std::sync::RwLock<ProofLang> = std::sync::RwLock::new(ProofLang::En);
@@ -1185,8 +1199,9 @@ index 6129d03..3b13988 100644
 +    *DEFAULT_LANGUAGE.read().unwrap_or_else(|e| e.into_inner())
 +}
 +
-+/// Proof text with no language tag in `lang` from now on (the web build sets Spanish). Callers
-+/// drop what they cached for the old language ([`crate::data_arrived`]).
++/// Proof text with no language tag, and text in plain `en-US` (see [`ProofLang::from_tag`]), in `lang`
++/// from now on (the web build sets Spanish). Callers drop what they cached for the old language
++/// ([`crate::data_arrived`]).
 +pub fn set_default_language(lang: ProofLang) {
 +    *DEFAULT_LANGUAGE.write().unwrap_or_else(|e| e.into_inner()) = lang;
 +}
@@ -1194,7 +1209,7 @@ index 6129d03..3b13988 100644
  /// A BCP 47 tag in canonical case (`pl-PL`, `en-GB`, `zh-Hant-TW`, `x-none`), or `None` when
  /// `tag` isn't shaped like one: 1–35 ASCII letters, digits and `-`/`_` separators, starting with
  /// a 2–8 letter language (or `x`/`i` for private and grandfathered tags). `_` becomes `-`.
-@@ -182,6 +205,11 @@ mod tests {
+@@ -182,6 +217,11 @@ mod tests {
              assert_eq!(ProofLang::from_tag(Some(t)), ProofLang::Id, "{t}");
          }
          assert_eq!(ProofLang::Id.code(), "id");
@@ -1206,7 +1221,7 @@ index 6129d03..3b13988 100644
          assert!(ProofLang::Id.is_proofed() && ProofLang::PROOFED.contains(&ProofLang::Id));
          for t in ["en", "en-US", "en-GB", "EN_au", "en-Latn-US"] {
              assert_eq!(ProofLang::from_tag(Some(t)), ProofLang::En, "{t}");
-@@ -192,7 +220,7 @@ mod tests {
+@@ -192,7 +232,7 @@ mod tests {
          for t in ["tr", "tr-TR", "tr-CY", "TR_tr", "tur"] {
              assert_eq!(ProofLang::from_tag(Some(t)), ProofLang::Tr, "{t}");
          }
@@ -1341,6 +1356,38 @@ index 5afa42d..9923429 100644
              assert!(!has_dictionary(l), "{l:?}");
          }
          // The gate follows the dictionaries, not English: every proofed language is proofed.
+diff --git a/crates/proof/tests/default_language.rs b/crates/proof/tests/default_language.rs
+new file mode 100644
+index 0000000..8111d47
+--- /dev/null
++++ b/crates/proof/tests/default_language.rs
+@@ -0,0 +1,26 @@
++//! The default proofing language is global state, so it is tested here, in its own process, and not next to tests that expect English.
++
++use wordcraft_proof::ProofLang;
++use wordcraft_proof::lang::{default_language, set_default_language};
++
++#[test]
++fn default_language_applies_to_untagged_text_and_to_plain_us_english() {
++    assert_eq!(default_language(), ProofLang::En, "English until a front end says otherwise");
++    assert_eq!(ProofLang::from_tag(Some("en-US")), ProofLang::En);
++
++    set_default_language(ProofLang::Es);
++    // What nobody chose: no tag, an empty one, and the en-US a new document carries.
++    for t in [None, Some(""), Some("en"), Some("en-US"), Some("EN-us"), Some("en_US"), Some(" en-US ")] {
++        assert_eq!(ProofLang::from_tag(t), ProofLang::Es, "{t:?}");
++    }
++    // What someone chose stays: another English, Spanish itself, and other languages.
++    assert_eq!(ProofLang::from_tag(Some("en-GB")), ProofLang::En);
++    assert_eq!(ProofLang::from_tag(Some("en-AU")), ProofLang::En);
++    assert_eq!(ProofLang::from_tag(Some("en-Latn-US")), ProofLang::En);
++    assert_eq!(ProofLang::from_tag(Some("es-ES")), ProofLang::Es);
++    assert_eq!(ProofLang::from_tag(Some("pt-BR")), ProofLang::Pt);
++    assert_eq!(ProofLang::from_tag(Some("fr-FR")), ProofLang::Other);
++
++    set_default_language(ProofLang::En);
++    assert_eq!(ProofLang::from_tag(Some("en-US")), ProofLang::En);
++}
 diff --git a/crates/ui-egui/Cargo.toml b/crates/ui-egui/Cargo.toml
 index 48ed412..872ffab 100644
 --- a/crates/ui-egui/Cargo.toml
