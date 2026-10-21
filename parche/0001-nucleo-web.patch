@@ -1,0 +1,1073 @@
+diff --git a/Cargo.lock b/Cargo.lock
+index 31028fe..b37e62c 100644
+--- a/Cargo.lock
++++ b/Cargo.lock
+@@ -5141,6 +5141,7 @@ dependencies = [
+  "egui",
+  "fmv-macos-events",
+  "getrandom 0.3.4",
++ "image",
+  "log",
+  "objc2 0.6.5",
+  "objc2-app-kit 0.3.2",
+@@ -5166,6 +5167,7 @@ dependencies = [
+ name = "wordcraft-cli"
+ version = "0.9.0"
+ dependencies = [
++ "image",
+  "serde_json",
+  "sys-locale",
+  "wordcraft-doc",
+@@ -5259,6 +5261,10 @@ dependencies = [
+  "zip",
+ ]
+ 
++[[package]]
++name = "wordcraft-extdata"
++version = "0.9.0"
++
+ [[package]]
+ name = "wordcraft-fonts"
+ version = "0.9.0"
+@@ -5269,6 +5275,7 @@ dependencies = [
+  "skrifa 0.47.0",
+  "unicode-bidi",
+  "unicode-script",
++ "wordcraft-extdata",
+  "wuff",
+ ]
+ 
+@@ -5362,6 +5369,7 @@ dependencies = [
+  "log",
+  "miniz_oxide 0.8.9",
+  "proptest",
++ "wordcraft-extdata",
+ ]
+ 
+ [[package]]
+@@ -5396,6 +5404,7 @@ dependencies = [
+  "unicode-bidi",
+  "wordcraft-doc",
+  "wordcraft-engine",
++ "wordcraft-extdata",
+  "wordcraft-fonts",
+  "wordcraft-geom",
+  "wordcraft-layout",
+@@ -5420,10 +5429,25 @@ dependencies = [
+  "web-sys",
+  "wordcraft-doc",
+  "wordcraft-engine",
++ "wordcraft-extdata",
+  "wordcraft-fonts",
+  "wordcraft-ui-egui",
+ ]
+ 
++[[package]]
++name = "wordcraft-web-core"
++version = "0.9.0"
++dependencies = [
++ "js-sys",
++ "log",
++ "serde_json",
++ "wasm-bindgen",
++ "wordcraft-engine",
++ "wordcraft-extdata",
++ "wordcraft-fonts",
++ "wordcraft-geom",
++]
++
+ [[package]]
+ name = "wordcraft-zotero"
+ version = "0.9.0"
+diff --git a/Cargo.toml b/Cargo.toml
+index 3cba530..f80baf7 100644
+--- a/Cargo.toml
++++ b/Cargo.toml
+@@ -13,6 +13,8 @@ repository = "https://github.com/storytold/wordcraft"
+ [workspace.dependencies]
+ # internal
+ wordcraft-geom = { path = "crates/geom" }
++wordcraft-extdata = { path = "crates/extdata" }
++wordcraft-web-core = { path = "crates/web-core" }
+ wordcraft-doc = { path = "crates/doc" }
+ wordcraft-fonts = { path = "crates/fonts" }
+ wordcraft-layout = { path = "crates/layout" }
+@@ -51,7 +53,7 @@ harfrust = "0.13"
+ # (brotli-decompressor, flate2) are already in the tree.
+ wuff = "0.2.9"
+ vello_cpu = "0.2"
+-image = { version = "0.25", default-features = false, features = ["png", "jpeg", "webp", "gif", "bmp", "tiff"] }
++image = { version = "0.25", default-features = false, features = ["png", "jpeg", "webp", "gif", "bmp"] }
+ craft-pdf = { git = "https://github.com/storytold/craft-libs", rev = "c3487320b2d1de657b860b3c8abb44e1f2b32bd8", version = "=0.1.0", default-features = false, features = ["write"] }
+ quick-xml = "0.41"
+ zip = { version = "3", default-features = false, features = ["deflate"] }
+diff --git a/apps/wordcraft-cli/Cargo.toml b/apps/wordcraft-cli/Cargo.toml
+index 7f9b25d..5a8ede5 100644
+--- a/apps/wordcraft-cli/Cargo.toml
++++ b/apps/wordcraft-cli/Cargo.toml
+@@ -14,6 +14,8 @@ path = "src/main.rs"
+ workspace = true
+ 
+ [dependencies]
++# TIFF pictures stay supported on desktop; the web build leaves the codec out to save size.
++image = { workspace = true, features = ["tiff"] }
+ wordcraft-doc = { workspace = true }
+ wordcraft-engine = { workspace = true }
+ wordcraft-render = { workspace = true }
+diff --git a/apps/wordcraft-web/Cargo.toml b/apps/wordcraft-web/Cargo.toml
+index 9152db3..62a2c8c 100644
+--- a/apps/wordcraft-web/Cargo.toml
++++ b/apps/wordcraft-web/Cargo.toml
+@@ -14,6 +14,7 @@ name = "wordcraft-web"
+ path = "src/main.rs"
+ 
+ [dependencies]
++wordcraft-extdata = { workspace = true }
+ wordcraft-engine = { workspace = true }
+ wordcraft-ui-egui = { workspace = true }
+ egui = { workspace = true }
+@@ -29,4 +30,4 @@ rfd = { workspace = true }
+ wasm-bindgen = "0.2"
+ wasm-bindgen-futures = "0.4"
+ js-sys = "0.3"
+-web-sys = { version = "0.3", features = ["Window", "Document", "Element", "HtmlElement", "HtmlCanvasElement", "HtmlAnchorElement", "HtmlIFrameElement", "Blob", "BlobPropertyBag", "Url", "Location", "CssStyleDeclaration", "Event", "EventTarget", "BeforeUnloadEvent", "ClipboardEvent", "DataTransfer", "FileList", "File", "DomStringList", "IdbFactory", "IdbOpenDbRequest", "IdbRequest", "IdbDatabase", "IdbObjectStore", "IdbTransaction", "IdbTransactionMode", "MediaQueryList", "Storage"] }
++web-sys = { version = "0.3", features = ["Window", "Document", "Element", "HtmlElement", "HtmlCanvasElement", "HtmlAnchorElement", "HtmlIFrameElement", "Blob", "BlobPropertyBag", "Url", "Location", "CssStyleDeclaration", "Event", "EventTarget", "BeforeUnloadEvent", "ClipboardEvent", "DataTransfer", "FileList", "File", "DomStringList", "IdbFactory", "IdbOpenDbRequest", "IdbRequest", "IdbDatabase", "IdbObjectStore", "IdbTransaction", "IdbTransactionMode", "MediaQueryList", "Storage", "Response"] }
+diff --git a/apps/wordcraft-web/src/assets.rs b/apps/wordcraft-web/src/assets.rs
+new file mode 100644
+index 0000000..c42c6a2
+--- /dev/null
++++ b/apps/wordcraft-web/src/assets.rs
+@@ -0,0 +1,92 @@
++//! Data kept out of the wasm and fetched by the page (`wordcraft_extdata`): the bundled faces,
++//! hyphenation patterns and the interface catalog of the language in use. Files sit next to the
++//! page under `assets/` (see `index.html`); the browser caches them separately from the wasm.
++
++use std::cell::RefCell;
++use std::collections::HashSet;
++
++use wasm_bindgen::JsCast as _;
++use wasm_bindgen_futures::JsFuture;
++
++const BASE: &str = "assets/";
++// The web build is Spanish-only: one interface catalog, and hyphenation for English (the default
++// document language); Polish, Portuguese and Italian patterns stay out.
++const HYPHENATION: &[&str] = &["en-us.dic", "en-us.pat"];
++const INTERFACE: &str = "es";
++
++thread_local! {
++    /// Catalogs requested so far, so each is fetched once.
++    static REQUESTED: RefCell<HashSet<String>> = RefCell::default();
++}
++
++/// Everything the app needs before its first frame: faces, hyphenation, and the catalog of the
++/// language the interface starts in (`code`).
++pub async fn preload(code: &str) -> Result<(), String> {
++    // Faces text needs from the start; the rest arrive when asked for (`serve_requests`).
++    let mut names: Vec<String> =
++        wordcraft_fonts::BUNDLED_FILES.iter().filter(|f| !wordcraft_fonts::LAZY_FILES.contains(f)).map(|f| format!("fonts/{f}")).collect();
++    names.extend(HYPHENATION.iter().map(|f| format!("hyphenation/{f}")));
++    if let Some(n) = catalog_name(code) {
++        names.push(n);
++    }
++    fetch_into_registry(names).await
++}
++
++/// Fetch the catalog for `code` in the background when it isn't loaded; `done` runs afterwards.
++pub fn ensure_catalog(code: &str, done: impl FnOnce() + 'static) {
++    let Some(name) = catalog_name(code) else { return };
++    if wordcraft_extdata::bytes(&name).is_some() || !REQUESTED.with(|r| r.borrow_mut().insert(name.clone())) {
++        return;
++    }
++    wasm_bindgen_futures::spawn_local(async move {
++        match fetch_into_registry(vec![name.clone()]).await {
++            Ok(()) => done(),
++            Err(e) => log::warn!("interface language not loaded: {e}"),
++        }
++    });
++}
++
++/// `i18n/es.tsv` for Spanish; English is built in and no other language ships.
++pub fn catalog_name(code: &str) -> Option<String> {
++    (code == INTERFACE).then(|| format!("i18n/{code}.tsv"))
++}
++
++/// Fetch the files code asked for since the last frame (bundled faces text started using) and
++/// add them to the font database, which makes the app lay out again.
++pub fn serve_requests(ctx: &egui::Context) {
++    for name in wordcraft_extdata::take_requests() {
++        let ctx = ctx.clone();
++        wasm_bindgen_futures::spawn_local(async move {
++            if let Err(e) = fetch_into_registry(vec![name.clone()]).await {
++                log::warn!("font not loaded: {e}");
++                return;
++            }
++            if let Some(bytes) = wordcraft_extdata::bytes(&name) {
++                wordcraft_fonts::FontDb::global().add_lazy_bundled(bytes.to_vec());
++                ctx.request_repaint();
++            }
++        });
++    }
++}
++
++async fn fetch_into_registry(names: Vec<String>) -> Result<(), String> {
++    let window = web_sys::window().ok_or("no window")?;
++    let requests = js_sys::Array::new();
++    for n in &names {
++        requests.push(&window.fetch_with_str(&format!("{BASE}{n}")));
++    }
++    let responses = JsFuture::from(js_sys::Promise::all(&requests)).await.map_err(|e| format!("{e:?}"))?;
++    let buffers = js_sys::Array::new();
++    for r in js_sys::Array::from(&responses).iter() {
++        let r: web_sys::Response = r.dyn_into().map_err(|_| "not a response".to_string())?;
++        if !r.ok() {
++            return Err(format!("{} {}", r.status(), r.url()));
++        }
++        buffers.push(&r.array_buffer().map_err(|e| format!("{e:?}"))?.into());
++    }
++    let data = JsFuture::from(js_sys::Promise::all(&buffers)).await.map_err(|e| format!("{e:?}"))?;
++    for (n, buf) in names.into_iter().zip(js_sys::Array::from(&data).iter()) {
++        wordcraft_extdata::provide(&n, js_sys::Uint8Array::new(&buf).to_vec());
++    }
++    Ok(())
++}
+diff --git a/apps/wordcraft-web/src/main.rs b/apps/wordcraft-web/src/main.rs
+index 39c2f98..e77a213 100644
+--- a/apps/wordcraft-web/src/main.rs
++++ b/apps/wordcraft-web/src/main.rs
+@@ -15,6 +15,8 @@ mod prefs;
+ #[cfg(any(target_arch = "wasm32", test))]
+ mod save_fallback;
+ 
++#[cfg(target_arch = "wasm32")]
++mod assets;
+ #[cfg(target_arch = "wasm32")]
+ mod web;
+ 
+diff --git a/apps/wordcraft-web/src/web.rs b/apps/wordcraft-web/src/web.rs
+index b2e698c..2b05dec 100644
+--- a/apps/wordcraft-web/src/web.rs
++++ b/apps/wordcraft-web/src/web.rs
+@@ -27,6 +27,18 @@ pub fn start() {
+             log::error!("missing <canvas id=\"{CANVAS_ID}\">");
+             return;
+         };
++        // Faces, hyphenation and the interface catalog come from files, not from the wasm.
++        let lang = stored_prefs()
++            .and_then(|s| wordcraft_ui_egui::UiState::from_json(s.as_bytes()))
++            .map(|ui| wordcraft_ui_egui::i18n::Lang::from_pref(&ui.language))
++            .unwrap_or_else(wordcraft_ui_egui::i18n::system_lang);
++        if let Err(e) = crate::assets::preload(lang.code()).await {
++            if let Some(el) = document.get_element_by_id(LOADING_ID) {
++                el.set_inner_html(&format!("<p>WordCraft failed to load its data files: {e}</p>"));
++            }
++            log::error!("data files: {e}");
++            return;
++        }
+         let dirty = Rc::new(Cell::new(false));
+         let saves = AsyncSaves::default();
+         if let Err(e) = guard_unload(dirty.clone(), saves.clone()) {
+@@ -116,6 +128,10 @@ fn stored_prefs() -> Option<String> {
+ 
+ impl eframe::App for WebShell {
+     fn logic(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
++        crate::assets::serve_requests(ctx);
++        // A language picked in Options is fetched on first use; the UI repaints when it arrives.
++        let repaint = ctx.clone();
++        crate::assets::ensure_catalog(wordcraft_ui_egui::i18n::current().code(), move || repaint.request_repaint());
+         let dropped = ctx.input_mut(|i| std::mem::take(&mut i.raw.dropped_files));
+         for f in dropped {
+             let inbox = self.inbox.clone();
+diff --git a/apps/wordcraft/Cargo.toml b/apps/wordcraft/Cargo.toml
+index 40e0d7a..9333756 100644
+--- a/apps/wordcraft/Cargo.toml
++++ b/apps/wordcraft/Cargo.toml
+@@ -11,6 +11,8 @@ description = "WordCraft desktop app"
+ workspace = true
+ 
+ [dependencies]
++# TIFF pictures stay supported on desktop; the web build leaves the codec out to save size.
++image = { workspace = true, features = ["tiff"] }
+ wordcraft-doc = { workspace = true }
+ wordcraft-engine = { workspace = true }
+ wordcraft-proof = { workspace = true }
+diff --git a/crates/extdata/Cargo.toml b/crates/extdata/Cargo.toml
+new file mode 100644
+index 0000000..3c203e7
+--- /dev/null
++++ b/crates/extdata/Cargo.toml
+@@ -0,0 +1,10 @@
++[package]
++name = "wordcraft-extdata"
++description = "Data files the web build fetches at start-up instead of embedding them in the wasm"
++version.workspace = true
++edition.workspace = true
++license.workspace = true
++publish = false
++
++[lints]
++workspace = true
+diff --git a/crates/extdata/src/lib.rs b/crates/extdata/src/lib.rs
+new file mode 100644
+index 0000000..c6e4592
+--- /dev/null
++++ b/crates/extdata/src/lib.rs
+@@ -0,0 +1,48 @@
++//! Data the web build keeps out of the wasm. The page fetches the files (fonts, interface
++//! catalogs, hyphenation patterns) and hands their bytes to [`provide`] before the app starts;
++//! the crates that used to `include_bytes!` them call [`bytes`] / [`text`] instead. Desktop builds
++//! still embed everything and never touch this registry.
++
++use std::collections::HashMap;
++use std::sync::Mutex;
++
++static FILES: Mutex<Option<HashMap<String, &'static [u8]>>> = Mutex::new(None);
++
++/// Register a fetched file under its asset-relative name (`fonts/Inter-Regular.ttf`). The bytes
++/// are leaked on purpose: callers hold `&'static` slices for the life of the page.
++pub fn provide(name: &str, data: Vec<u8>) {
++    if let Ok(mut g) = FILES.lock() {
++        g.get_or_insert_with(HashMap::new).insert(name.to_owned(), Box::leak(data.into_boxed_slice()));
++    }
++}
++
++/// A registered file, or `None` when the page has not provided it.
++pub fn bytes(name: &str) -> Option<&'static [u8]> {
++    FILES.lock().ok()?.as_ref()?.get(name).copied()
++}
++
++/// A registered text file (empty when missing or not UTF-8).
++pub fn text(name: &str) -> &'static str {
++    bytes(name).and_then(|b| std::str::from_utf8(b).ok()).unwrap_or("")
++}
++
++static WANTED: Mutex<Vec<String>> = Mutex::new(Vec::new());
++
++/// Ask the page to fetch `name` (not yet provided) the next time it looks; each name is queued
++/// once. This is how code that needs a file synchronously (font lookup) says it wants one it
++/// started without.
++pub fn request(name: &str) {
++    if bytes(name).is_some() {
++        return;
++    }
++    if let Ok(mut w) = WANTED.lock()
++        && !w.iter().any(|n| n == name)
++    {
++        w.push(name.to_owned());
++    }
++}
++
++/// The names asked for since the last call.
++pub fn take_requests() -> Vec<String> {
++    WANTED.lock().map(|mut w| std::mem::take(&mut *w)).unwrap_or_default()
++}
+diff --git a/crates/fonts/Cargo.toml b/crates/fonts/Cargo.toml
+index 9107da4..14fd88d 100644
+--- a/crates/fonts/Cargo.toml
++++ b/crates/fonts/Cargo.toml
+@@ -9,6 +9,7 @@ description = "WordCraft fonts: font database (bundled OFL + system), metrics, g
+ workspace = true
+ 
+ [dependencies]
++wordcraft-extdata = { workspace = true }
+ kurbo = { workspace = true }
+ skrifa = { workspace = true }
+ harfrust = { workspace = true }
+diff --git a/crates/fonts/src/fontdb.rs b/crates/fonts/src/fontdb.rs
+index 798ec6a..8ca094b 100644
+--- a/crates/fonts/src/fontdb.rs
++++ b/crates/fonts/src/fontdb.rs
+@@ -21,9 +21,56 @@ pub const FALLBACK_FAMILY: &str = "Source Sans 3";
+ /// The bundled fonts (OFL), as font file bytes. Japanese fonts are not bundled: they come from
+ /// the optional craft-fonts build input ([`crate::japanese_document_fonts`]).
+ pub fn bundled() -> &'static [&'static [u8]] {
+-    BUNDLED
++    #[cfg(not(target_arch = "wasm32"))]
++    {
++        BUNDLED
++    }
++    // The web build fetches the faces before it starts (`wordcraft_extdata`), in this order.
++    #[cfg(target_arch = "wasm32")]
++    {
++        // Only the faces the page loads before it starts; [`LAZY_FILES`] join when text needs them.
++        static WEB: std::sync::OnceLock<Vec<&'static [u8]>> = std::sync::OnceLock::new();
++        WEB.get_or_init(|| {
++            // A page that doesn't provide a face (the HTML front end needs no UI faces) just lacks it.
++            BUNDLED_FILES.iter().filter(|n| !LAZY_FILES.contains(n)).filter_map(|n| wordcraft_extdata::bytes(&format!("fonts/{n}"))).collect()
++        })
++    }
++}
++
++/// File names (under `assets/fonts`) of the bundled faces, in [`bundled`] order.
++pub const BUNDLED_FILES: &[&str] = &["SourceSans3-Regular.ttf", "SourceSans3-Semibold.ttf", "SourceSans3-Bold.ttf", "SourceSans3-It.ttf", "SourceSerif4-Regular.ttf", "SourceSerif4-It.ttf", "SourceSerif4-Semibold.ttf", "SourceSerif4-Bold.ttf", "SourceSerif4-BoldIt.ttf", "Inter-Regular.ttf", "Inter-Medium.ttf", "Inter-SemiBold.ttf", "JetBrainsMono-Regular.ttf"];
++
++/// The bundled faces the web build fetches only once text asks for them: Source Serif, and the
++/// bold and italic faces of Source Sans (the fallback family). Desktop embeds them all.
++pub const LAZY_FILES: &[&str] = &[
++    "SourceSans3-Semibold.ttf",
++    "SourceSans3-Bold.ttf",
++    "SourceSans3-It.ttf",
++    "SourceSerif4-Regular.ttf",
++    "SourceSerif4-It.ttf",
++    "SourceSerif4-Semibold.ttf",
++    "SourceSerif4-Bold.ttf",
++    "SourceSerif4-BoldIt.ttf",
++];
++
++/// Queue the lazy faces a lookup of `family` / `style` would use (web only): Source Serif for that
++/// family, the bold and italic Source Sans faces for any bold or italic text, since unknown
++/// families fall back to it. The page fetches them and calls [`FontDb::add_lazy_bundled`].
++#[cfg(target_arch = "wasm32")]
++fn want_lazy(family: &str, style: &str) {
++    use std::sync::atomic::{AtomicBool, Ordering::Relaxed};
++    static SERIF: AtomicBool = AtomicBool::new(false);
++    static SANS: AtomicBool = AtomicBool::new(false);
++    let ask = |prefix: &str| LAZY_FILES.iter().filter(|f| f.starts_with(prefix)).for_each(|f| wordcraft_extdata::request(&format!("fonts/{f}")));
++    if !SERIF.load(Relaxed) && family.len() >= 12 && family[..12].eq_ignore_ascii_case("source serif") && !SERIF.swap(true, Relaxed) {
++        ask("SourceSerif4");
++    }
++    if !SANS.load(Relaxed) && (style_weight(style) >= 600.0 || style_italic(style)) && !SANS.swap(true, Relaxed) {
++        ask("SourceSans3");
++    }
+ }
+ 
++#[cfg(not(target_arch = "wasm32"))]
+ static BUNDLED: &[&[u8]] = &[
+     include_bytes!("../../../assets/fonts/SourceSans3-Regular.ttf"),
+     include_bytes!("../../../assets/fonts/SourceSans3-Semibold.ttf"),
+@@ -849,7 +896,7 @@ pub(crate) fn last_resort_face() -> Arc<FontFace> {
+         // The font is compiled in (`include_bytes!`), so parsing it can't depend on input; the
+         // `last_resort_face_parses` test proves it on every run.
+         #[allow(clippy::expect_used)]
+-        let face = make_face(FontBytes::Static(BUNDLED[0]), 0, FALLBACK_FAMILY.into(), "Regular".into(), FALLBACK_FAMILY.into(), Vec::new())
++        let face = make_face(FontBytes::Static(bundled()[0]), 0, FALLBACK_FAMILY.into(), "Regular".into(), FALLBACK_FAMILY.into(), Vec::new())
+             .expect("the compiled-in Source Sans 3 Regular parses");
+         Arc::new(face)
+     })
+@@ -961,7 +1008,7 @@ impl FontDb {
+         let mut faces = Vec::new();
+         let others = crate::CRAFT_FONTS.iter().filter(|f| !f.scripts.contains(&"Jpan"));
+         let craft = crate::japanese_document_fonts().into_iter().chain(others).map(|f| f.bytes);
+-        for data in BUNDLED.iter().copied().chain(craft) {
++        for data in bundled().iter().copied().chain(craft) {
+             for f in enumerate_faces(data) {
+                 if let Some(mut face) = make_face(FontBytes::Static(data), f.index, f.family, f.style, f.legacy, f.coords) {
+                     face.local_names = f.local;
+@@ -1135,6 +1182,16 @@ impl FontDb {
+ 
+     /// Add a user font (TTF/OTF/TTC bytes). Returns the number of faces added (0 if unparseable or
+     /// every face was already present).
++    /// Add a bundled face the web page fetched on demand ([`LAZY_FILES`]); layouts redraw with it
++    /// ([`FontDb::generation`]). Returns how many faces were added.
++    pub fn add_lazy_bundled(&self, bytes: Vec<u8>) -> usize {
++        let added = self.add_fonts(vec![(bytes, None)]);
++        if added > 0 {
++            self.fonts_changed();
++        }
++        added
++    }
++
+     pub fn add_font(&self, bytes: Vec<u8>) -> usize {
+         self.add_fonts(vec![(bytes, None)])
+     }
+@@ -1278,6 +1335,8 @@ impl FontDb {
+     /// name ("Roboto Light", whose styles are Light and Light Italic). Installed system fonts are
+     /// found by name whatever ran before. An exact full name selects its face.
+     pub fn face(&self, family: &str, style: &str) -> Arc<FontFace> {
++        #[cfg(target_arch = "wasm32")]
++        want_lazy(family, style);
+         if let Some(f) = self.find(family, style) {
+             return f;
+         }
+diff --git a/crates/fonts/src/fontdb/user.rs b/crates/fonts/src/fontdb/user.rs
+index 0f6d3c4..36506aa 100644
+--- a/crates/fonts/src/fontdb/user.rs
++++ b/crates/fonts/src/fontdb/user.rs
+@@ -319,7 +319,7 @@ impl FontDb {
+     }
+ 
+     /// Forget cached fallback choices and tell watchers ([`FontDb::generation`]).
+-    fn fonts_changed(&self) {
++    pub(crate) fn fonts_changed(&self) {
+         self.fallbacks.write().unwrap_or_else(|e| e.into_inner()).map.clear();
+         self.generation.fetch_add(1, Ordering::AcqRel);
+     }
+diff --git a/crates/fonts/src/lib.rs b/crates/fonts/src/lib.rs
+index 985d030..c40bb58 100644
+--- a/crates/fonts/src/lib.rs
++++ b/crates/fonts/src/lib.rs
+@@ -16,7 +16,7 @@ pub mod word;
+ 
+ pub use fontdb::{
+     FALLBACK_FAMILY, FONT_FILE_EXTS, FaceRef, FontDb, FontFace, FontFormat, Installed, LocalName, MAX_FONT_FILE_BYTES, UserFont, UserFontError,
+-    base_style, bundled, decode_font_file, is_font_file_name, name_language_matches, sniff, system_font_dirs,
++    BUNDLED_FILES, LAZY_FILES, base_style, bundled, decode_font_file, is_font_file_name, name_language_matches, sniff, system_font_dirs,
+ };
+ pub use harfrust::Feature;
+ use harfrust::{Direction, ShapeOptions, Tag, UnicodeBuffer};
+diff --git a/crates/proof/Cargo.toml b/crates/proof/Cargo.toml
+index abee190..6b7062d 100644
+--- a/crates/proof/Cargo.toml
++++ b/crates/proof/Cargo.toml
+@@ -9,6 +9,7 @@ description = "WordCraft proofing per language: spelling, suggestions, grammar c
+ workspace = true
+ 
+ [dependencies]
++wordcraft-extdata = { workspace = true }
+ log = { workspace = true }
+ miniz_oxide = "0.8"
+ 
+diff --git a/crates/proof/src/hyphen.rs b/crates/proof/src/hyphen.rs
+index 9fdae03..4bd4e3c 100644
+--- a/crates/proof/src/hyphen.rs
++++ b/crates/proof/src/hyphen.rs
+@@ -27,25 +27,37 @@ pub use crate::lang::ProofLang;
+ pub use dict::Dictionary;
+ pub use patterns::Patterns;
+ 
+-static EN_US_DIC: &[u8] = include_bytes!("../../../assets/hyphenation/en-us.dic");
+-static EN_US_PAT: &str = include_str!("../../../assets/hyphenation/en-us.pat");
+-/// hyph-utf8's `hyph-pl.tex`, unmodified (its licence header is in the file).
+-static PL_PAT: &str = include_str!("../../../assets/hyphenation/pl.pat");
+-/// hyph-utf8's `hyph-pt.tex`, unmodified (its BSD 3-clause header is in the file).
+-static PT_PAT: &str = include_str!("../../../assets/hyphenation/pt.pat");
+-/// hyph-utf8's `hyph-it.tex`, unmodified (offered under MIT or LPPL; WordCraft uses MIT, whose
+-/// notice is in the file's header).
+-static IT_PAT: &str = include_str!("../../../assets/hyphenation/it.pat");
++// Desktop embeds the patterns; the web build gets them from the page (`wordcraft_extdata`).
++#[cfg(not(target_arch = "wasm32"))]
++macro_rules! asset {
++    ($f:literal) => {
++        include_bytes!(concat!("../../../assets/hyphenation/", $f)).as_slice()
++    };
++}
++#[cfg(target_arch = "wasm32")]
++macro_rules! asset {
++    ($f:literal) => {
++        wordcraft_extdata::bytes(concat!("hyphenation/", $f)).unwrap_or(&[])
++    };
++}
++
++fn en_us_dic() -> &'static [u8] {
++    asset!("en-us.dic")
++}
++
++fn pattern_text(bytes: &'static [u8]) -> &'static str {
++    std::str::from_utf8(bytes).unwrap_or("")
++}
+ 
+ impl Dictionary {
+     /// The bundled US English dictionary (decoded on first use).
+     pub fn en_us() -> &'static Dictionary {
+         static D: OnceLock<Dictionary> = OnceLock::new();
+         D.get_or_init(|| {
+-            if EN_US_DIC.is_empty() {
++            if en_us_dic().is_empty() {
+                 return Dictionary::default();
+             }
+-            Dictionary::from_bytes(EN_US_DIC).unwrap_or_else(|e| {
++            Dictionary::from_bytes(en_us_dic()).unwrap_or_else(|e| {
+                 log::error!("{e}");
+                 Dictionary::default()
+             })
+@@ -57,25 +69,25 @@ impl Patterns {
+     /// The bundled US English patterns (parsed on first use).
+     pub fn en_us() -> &'static Patterns {
+         static P: OnceLock<Patterns> = OnceLock::new();
+-        P.get_or_init(|| Patterns::parse(EN_US_PAT))
++        P.get_or_init(|| Patterns::parse(pattern_text(asset!("en-us.pat"))))
+     }
+ 
+     /// The bundled Polish patterns and exception words (parsed on first use).
+     pub fn pl() -> &'static Patterns {
+         static P: OnceLock<Patterns> = OnceLock::new();
+-        P.get_or_init(|| Patterns::parse(PL_PAT))
++        P.get_or_init(|| Patterns::parse(pattern_text(asset!("pl.pat"))))
+     }
+ 
+     /// The bundled Portuguese patterns and exception words (parsed on first use).
+     pub fn pt() -> &'static Patterns {
+         static P: OnceLock<Patterns> = OnceLock::new();
+-        P.get_or_init(|| Patterns::parse(PT_PAT))
++        P.get_or_init(|| Patterns::parse(pattern_text(asset!("pt.pat"))))
+     }
+ 
+     /// The bundled Italian patterns (parsed on first use; the file has no exception words).
+     pub fn it() -> &'static Patterns {
+         static P: OnceLock<Patterns> = OnceLock::new();
+-        P.get_or_init(|| Patterns::parse(IT_PAT))
++        P.get_or_init(|| Patterns::parse(pattern_text(asset!("it.pat"))))
+     }
+ }
+ 
+diff --git a/crates/ui-egui/Cargo.toml b/crates/ui-egui/Cargo.toml
+index 48ed412..872ffab 100644
+--- a/crates/ui-egui/Cargo.toml
++++ b/crates/ui-egui/Cargo.toml
+@@ -9,6 +9,7 @@ description = "WordCraft egui front end (Word-style ribbon UI); swappable: nothi
+ workspace = true
+ 
+ [dependencies]
++wordcraft-extdata = { workspace = true }
+ craft-ui = { git = "https://github.com/storytold/craft-libs", rev = "d27646a5f7c8b4fc85d9dd3213b8c88b58e0088d" }
+ wordcraft-geom = { workspace = true }
+ wordcraft-doc = { workspace = true }
+diff --git a/crates/ui-egui/src/i18n/mod.rs b/crates/ui-egui/src/i18n/mod.rs
+index 092e376..7ca57fe 100644
+--- a/crates/ui-egui/src/i18n/mod.rs
++++ b/crates/ui-egui/src/i18n/mod.rs
+@@ -27,6 +27,21 @@
+ 
+ mod catalog;
+ 
++// Desktop embeds the catalogs; the web build fetches the one it shows (`wordcraft_extdata`,
++// `i18n/<code>.tsv`) before it starts, and the rest stay out of the wasm.
++#[cfg(not(target_arch = "wasm32"))]
++macro_rules! tsv {
++    ($f:literal) => {
++        include_str!($f)
++    };
++}
++#[cfg(target_arch = "wasm32")]
++macro_rules! tsv {
++    ($f:literal) => {
++        ""
++    };
++}
++
+ use std::cell::Cell;
+ use std::sync::OnceLock;
+ 
+@@ -58,7 +73,7 @@ pub static LANGUAGES: [LangInfo; 23] = [
+     LangInfo {
+         code: "zh-hans",
+         name: "简体中文",
+-        source: include_str!("zh-hans.tsv"),
++        source: tsv!("zh-hans.tsv"),
+         prefer_hans: true,
+         editing_lang: None,
+         catalog: OnceLock::new(),
+@@ -67,44 +82,44 @@ pub static LANGUAGES: [LangInfo; 23] = [
+     LangInfo {
+         code: "zh-hant",
+         name: "繁體中文",
+-        source: include_str!("zh-hant.tsv"),
++        source: tsv!("zh-hant.tsv"),
+         prefer_hans: true,
+         editing_lang: None,
+         catalog: OnceLock::new(),
+     },
+-    LangInfo { code: "ja", name: "日本語", source: include_str!("ja.tsv"), prefer_hans: false, editing_lang: None, catalog: OnceLock::new() },
++    LangInfo { code: "ja", name: "日本語", source: tsv!("ja.tsv"), prefer_hans: false, editing_lang: None, catalog: OnceLock::new() },
+     LangInfo {
+         code: "ko",
+         name: "한국어",
+-        source: include_str!("ko.tsv"),
++        source: tsv!("ko.tsv"),
+         prefer_hans: false, // 일본어처럼 CJK지만 한자 우선순위는 필요 없으므로 false
+         editing_lang: None, // 현재 한국어 맞춤법(proofing) 지원이 없으므로 None
+         catalog: OnceLock::new(),
+     },
+     LangInfo {
+-        code: "uk", name: "Українська", source: include_str!("uk.tsv"), prefer_hans: false, editing_lang: None, catalog: OnceLock::new()
++        code: "uk", name: "Українська", source: tsv!("uk.tsv"), prefer_hans: false, editing_lang: None, catalog: OnceLock::new()
+     },
+     // Spanish, neutral across Spain and Latin America; `es-ES`, `es-MX`, `es-419` … resolve here.
+-    LangInfo { code: "es", name: "Español", source: include_str!("es.tsv"), prefer_hans: false, editing_lang: None, catalog: OnceLock::new() },
++    LangInfo { code: "es", name: "Español", source: tsv!("es.tsv"), prefer_hans: false, editing_lang: None, catalog: OnceLock::new() },
+     // Brazilian Portuguese; `pt-BR` and `pt-BR-*` resolve here. Plain `pt` and `pt-PT` have no
+     // catalog yet (the European vocabulary differs), so they stay in English.
+     LangInfo {
+         code: "pt-br",
+         name: "Português (Brasil)",
+-        source: include_str!("pt-br.tsv"),
++        source: tsv!("pt-br.tsv"),
+         prefer_hans: false,
+         editing_lang: Some("pt-BR"),
+         catalog: OnceLock::new(),
+     },
+     // Serbian, Cyrillic script (the default per BCP 47 when no script is given); `sr`, `sr-RS`,
+     // `sr-Cyrl-*` resolve here.
+-    LangInfo { code: "sr", name: "Српски", source: include_str!("sr.tsv"), prefer_hans: false, editing_lang: None, catalog: OnceLock::new() },
++    LangInfo { code: "sr", name: "Српски", source: tsv!("sr.tsv"), prefer_hans: false, editing_lang: None, catalog: OnceLock::new() },
+     // Serbian, Latin script; `sr-Latn-*` resolves here (see `candidates`'s generic prefix
+     // matching — no special-casing needed, unlike Chinese's script-by-region fallback).
+     LangInfo {
+         code: "sr-latn",
+         name: "Srpski (latinica)",
+-        source: include_str!("sr-latn.tsv"),
++        source: tsv!("sr-latn.tsv"),
+         prefer_hans: false,
+         editing_lang: None,
+         catalog: OnceLock::new(),
+@@ -114,7 +129,7 @@ pub static LANGUAGES: [LangInfo; 23] = [
+     LangInfo {
+         code: "pl",
+         name: "Polski",
+-        source: include_str!("pl.tsv"),
++        source: tsv!("pl.tsv"),
+         prefer_hans: false,
+         editing_lang: Some("pl-PL"),
+         catalog: OnceLock::new(),
+@@ -122,21 +137,21 @@ pub static LANGUAGES: [LangInfo; 23] = [
+     LangInfo {
+         code: "cs",
+         name: "Čeština",
+-        source: include_str!("cs.tsv"),
++        source: tsv!("cs.tsv"),
+         prefer_hans: false,
+         editing_lang: Some("cs-CZ"),
+         catalog: OnceLock::new(),
+     },
+-    LangInfo { code: "et", name: "Eesti", source: include_str!("et.tsv"), prefer_hans: false, editing_lang: None, catalog: OnceLock::new() },
++    LangInfo { code: "et", name: "Eesti", source: tsv!("et.tsv"), prefer_hans: false, editing_lang: None, catalog: OnceLock::new() },
+     // German, neutral across Germany, Austria and Switzerland; `de`, `de-DE`, `de-AT`, `de-CH` …
+     // resolve here.
+-    LangInfo { code: "de", name: "Deutsch", source: include_str!("de.tsv"), prefer_hans: false, editing_lang: None, catalog: OnceLock::new() },
++    LangInfo { code: "de", name: "Deutsch", source: tsv!("de.tsv"), prefer_hans: false, editing_lang: None, catalog: OnceLock::new() },
+     // Russian; `ru`, `ru-RU`, `ru_RU.UTF-8` and other regions resolve here.
+-    LangInfo { code: "ru", name: "Русский", source: include_str!("ru.tsv"), prefer_hans: false, editing_lang: None, catalog: OnceLock::new() },
++    LangInfo { code: "ru", name: "Русский", source: tsv!("ru.tsv"), prefer_hans: false, editing_lang: None, catalog: OnceLock::new() },
+     LangInfo {
+         code: "tr",
+         name: "Türkçe",
+-        source: include_str!("tr.tsv"),
++        source: tsv!("tr.tsv"),
+         prefer_hans: false,
+         editing_lang: Some("tr-TR"),
+         catalog: OnceLock::new(),
+@@ -146,31 +161,47 @@ pub static LANGUAGES: [LangInfo; 23] = [
+     LangInfo {
+         code: "it",
+         name: "Italiano",
+-        source: include_str!("it.tsv"),
++        source: tsv!("it.tsv"),
+         prefer_hans: false,
+         editing_lang: Some("it-IT"),
+         catalog: OnceLock::new(),
+     },
+     // Hungarian; `hu`, `hu-HU` and `hu_HU.UTF-8` resolve here.
+-    LangInfo { code: "hu", name: "Magyar", source: include_str!("hu.tsv"), prefer_hans: false, editing_lang: None, catalog: OnceLock::new() },
++    LangInfo { code: "hu", name: "Magyar", source: tsv!("hu.tsv"), prefer_hans: false, editing_lang: None, catalog: OnceLock::new() },
+     // French; `fr`, `fr-FR`, `fr_CA` and other regions resolve here.
+-    LangInfo { code: "fr", name: "Français", source: include_str!("fr.tsv"), prefer_hans: false, editing_lang: None, catalog: OnceLock::new() },
++    LangInfo { code: "fr", name: "Français", source: tsv!("fr.tsv"), prefer_hans: false, editing_lang: None, catalog: OnceLock::new() },
+     // Bulgarian; `bg`, `bg-BG` and `bg_BG.UTF-8` resolve here.
+     LangInfo {
+-        code: "bg", name: "Български", source: include_str!("bg.tsv"), prefer_hans: false, editing_lang: None, catalog: OnceLock::new()
++        code: "bg", name: "Български", source: tsv!("bg.tsv"), prefer_hans: false, editing_lang: None, catalog: OnceLock::new()
+     },
+     // Vietnamese; `vi`, `vi-VN` and `vi_VN.UTF-8` resolve here.
+-    LangInfo { code: "vi", name: "Tiếng Việt", source: include_str!("vi.tsv"), prefer_hans: false, editing_lang: None, catalog: OnceLock::new() },
++    LangInfo { code: "vi", name: "Tiếng Việt", source: tsv!("vi.tsv"), prefer_hans: false, editing_lang: None, catalog: OnceLock::new() },
+     // Swedish; sv, sv-SE, sv-FI and sv_SE.UTF-8 resolve here.
+-    LangInfo { code: "sv", name: "Svenska", source: include_str!("sv.tsv"), prefer_hans: false, editing_lang: None, catalog: OnceLock::new() },
++    LangInfo { code: "sv", name: "Svenska", source: tsv!("sv.tsv"), prefer_hans: false, editing_lang: None, catalog: OnceLock::new() },
+     // Croatian; `hr`, `hr-HR` and `hr_HR.UTF-8` resolve here.
+-    LangInfo { code: "hr", name: "Hrvatski", source: include_str!("hr.tsv"), prefer_hans: false, editing_lang: None, catalog: OnceLock::new() },
++    LangInfo { code: "hr", name: "Hrvatski", source: tsv!("hr.tsv"), prefer_hans: false, editing_lang: None, catalog: OnceLock::new() },
+ ];
+ 
+ impl LangInfo {
++    /// The catalog text: embedded on desktop, provided by the page on the web.
++    fn source(&self) -> &'static str {
++        #[cfg(target_arch = "wasm32")]
++        if self.code != "en" {
++            return wordcraft_extdata::text(&format!("i18n/{}.tsv", self.code));
++        }
++        self.source
++    }
++
+     fn catalog(&self) -> &Catalog {
++        // Web: until the page has fetched this language's catalog, show English without caching
++        // the empty parse, so the lookup picks the catalog up once it arrives.
++        #[cfg(target_arch = "wasm32")]
++        if self.code != "en" && self.source().is_empty() {
++            static NONE: OnceLock<Catalog> = OnceLock::new();
++            return NONE.get_or_init(|| Catalog::parse("").0);
++        }
+         self.catalog.get_or_init(|| {
+-            let (catalog, errors) = Catalog::parse(self.source);
++            let (catalog, errors) = Catalog::parse(self.source());
+             for error in errors {
+                 log::warn!("{} interface catalog: {error}; that entry shows in English", self.code);
+             }
+@@ -230,13 +261,13 @@ impl Lang {
+     /// order: the catalogs of the CJK languages using that order, and every language's own name (the
+     /// Options list). The interface fonts check the embedded faces against it (#486).
+     pub fn cjk_font_text(hans: bool) -> (Vec<&'static str>, String) {
+-        let catalogs = Lang::all().filter(|l| l.uses_cjk() && l.prefers_hans() == hans).map(|l| l.0.source).collect();
++        let catalogs = Lang::all().filter(|l| l.uses_cjk() && l.prefers_hans() == hans).map(|l| l.0.source()).collect();
+         (catalogs, Lang::all().map(Lang::name).collect::<Vec<_>>().join(" "))
+     }
+ 
+     /// The CJK interface catalogs using the Korean or Chinese writing-system preference.
+     pub fn cjk_font_text_for(hans: bool, korean: bool) -> (Vec<&'static str>, String) {
+-        let catalogs = Lang::all().filter(|l| l.uses_cjk() && l.prefers_hans() == hans && l.prefers_korean() == korean).map(|l| l.0.source).collect();
++        let catalogs = Lang::all().filter(|l| l.uses_cjk() && l.prefers_hans() == hans && l.prefers_korean() == korean).map(|l| l.0.source()).collect();
+         (catalogs, Lang::all().map(Lang::name).collect::<Vec<_>>().join(" "))
+     }
+ 
+diff --git a/crates/ui-egui/src/theme.rs b/crates/ui-egui/src/theme.rs
+index b9c1239..2f6904b 100644
+--- a/crates/ui-egui/src/theme.rs
++++ b/crates/ui-egui/src/theme.rs
+@@ -535,11 +535,24 @@ pub fn font_definitions_language(prefer_hans: bool, prefer_korean: bool, system_
+     let add = |fonts: &mut FontDefinitions, name: &str, bytes: &'static [u8]| {
+         fonts.font_data.insert(name.into(), Arc::new(FontData::from_static(bytes)));
+     };
+-    add(&mut fonts, "Inter", include_bytes!("../../../assets/fonts/Inter-Regular.ttf"));
+-    add(&mut fonts, "InterMedium", include_bytes!("../../../assets/fonts/Inter-Medium.ttf"));
+-    add(&mut fonts, "InterSemiBold", include_bytes!("../../../assets/fonts/Inter-SemiBold.ttf"));
+-    add(&mut fonts, "SourceSans", include_bytes!("../../../assets/fonts/SourceSans3-Regular.ttf"));
+-    add(&mut fonts, "Mono", include_bytes!("../../../assets/fonts/JetBrainsMono-Regular.ttf"));
++    // Desktop embeds the faces; the web build gets them from the page (`wordcraft_extdata`).
++    #[cfg(not(target_arch = "wasm32"))]
++    macro_rules! face {
++        ($f:literal) => {
++            include_bytes!(concat!("../../../assets/fonts/", $f))
++        };
++    }
++    #[cfg(target_arch = "wasm32")]
++    macro_rules! face {
++        ($f:literal) => {
++            wordcraft_extdata::bytes(concat!("fonts/", $f)).unwrap_or(&[])
++        };
++    }
++    add(&mut fonts, "Inter", face!("Inter-Regular.ttf"));
++    add(&mut fonts, "InterMedium", face!("Inter-Medium.ttf"));
++    add(&mut fonts, "InterSemiBold", face!("Inter-SemiBold.ttf"));
++    add(&mut fonts, "SourceSans", face!("SourceSans3-Regular.ttf"));
++    add(&mut fonts, "Mono", face!("JetBrainsMono-Regular.ttf"));
+     if let Some(prop) = fonts.families.get_mut(&FontFamily::Proportional) {
+         prop.insert(0, "Inter".into());
+         prop.push("SourceSans".into());
+diff --git a/crates/web-core/Cargo.toml b/crates/web-core/Cargo.toml
+new file mode 100644
+index 0000000..1b56e49
+--- /dev/null
++++ b/crates/web-core/Cargo.toml
+@@ -0,0 +1,25 @@
++[package]
++name = "wordcraft-web-core"
++description = "WordCraft for the browser without a Rust UI: the engine, layout and page rasteriser behind a wasm-bindgen API for an HTML front end"
++version.workspace = true
++edition.workspace = true
++license.workspace = true
++publish = false
++
++[lib]
++crate-type = ["cdylib", "rlib"]
++
++[lints]
++workspace = true
++
++[dependencies]
++wordcraft-engine = { workspace = true }
++wordcraft-fonts = { workspace = true }
++wordcraft-extdata = { workspace = true }
++wordcraft-geom = { workspace = true }
++serde_json = { workspace = true }
++log = { workspace = true }
++
++[target.'cfg(target_arch = "wasm32")'.dependencies]
++wasm-bindgen = "0.2"
++js-sys = "0.3"
+diff --git a/crates/web-core/src/lib.rs b/crates/web-core/src/lib.rs
+new file mode 100644
+index 0000000..94759ba
+--- /dev/null
++++ b/crates/web-core/src/lib.rs
+@@ -0,0 +1,193 @@
++//! The editor behind an HTML front end. The page owns the interface (ribbon, dialogs, status bar)
++//! and the input events; this crate owns the document: it runs engine commands, lays the document
++//! out and rasterises pages for `<canvas>`, and answers where the caret and selection are.
++//!
++//! Every action is an engine command (`format.bold`, `caret.left`, `text.insert`…), so the front
++//! end drives the editor with [`Editor::run`] and reads [`Editor::state`] back.
++//!
++//! Data files (the Source Sans face, hyphenation) are fetched by the page and handed over with
++//! [`provide_file`]; faces text needs later are listed by [`wanted_files`] and added with
++//! [`add_lazy_font`].
++#![cfg(target_arch = "wasm32")]
++#![deny(clippy::unwrap_used, clippy::expect_used, clippy::panic)]
++
++use std::sync::Arc;
++
++use serde_json::{Value, json};
++use wasm_bindgen::prelude::*;
++use wordcraft_engine::Session;
++use wordcraft_engine::render::{RenderOptions, render_page};
++use wordcraft_geom::Region;
++
++fn err(e: impl std::fmt::Display) -> JsError {
++    JsError::new(&e.to_string())
++}
++
++/// Files the page must fetch (under its `assets/` folder) before creating an [`Editor`].
++#[wasm_bindgen]
++pub fn core_files() -> Vec<String> {
++    ["fonts/SourceSans3-Regular.ttf", "hyphenation/en-us.dic", "hyphenation/en-us.pat"].map(String::from).to_vec()
++}
++
++/// Hand over a fetched data file under its asset-relative name.
++#[wasm_bindgen]
++pub fn provide_file(name: &str, bytes: Vec<u8>) {
++    wordcraft_extdata::provide(name, bytes);
++}
++
++/// Files the editor asked for since the last call (faces a document started using).
++#[wasm_bindgen]
++pub fn wanted_files() -> Vec<String> {
++    wordcraft_extdata::take_requests()
++}
++
++/// Add a face the page fetched on request; open documents lay out again (see [`Editor::rev`]).
++#[wasm_bindgen]
++pub fn add_lazy_font(bytes: Vec<u8>) -> usize {
++    wordcraft_fonts::FontDb::global().add_lazy_bundled(bytes)
++}
++
++#[wasm_bindgen]
++pub struct Editor {
++    session: Session,
++    /// Changes whenever something the page shows could have changed.
++    rev: u64,
++    fonts: u64,
++}
++
++#[wasm_bindgen]
++impl Editor {
++    /// A blank document on the paper of `locale` (`es-CL`: Letter).
++    #[wasm_bindgen(constructor)]
++    pub fn new(locale: &str) -> Editor {
++        let region = Region::from_tag(locale);
++        let mut session = Session::new(wordcraft_engine::blank_document(&region));
++        session.system_region = region;
++        Editor::from(session)
++    }
++
++    /// The sample document.
++    pub fn sample() -> Editor {
++        Editor::from(Session::new(wordcraft_engine::sample::sample_document()))
++    }
++
++    /// Replace the document with a file's contents (`.docx`, `.odt`, `.rtf`, `.txt`…, by name).
++    pub fn open(&mut self, name: &str, bytes: &[u8]) -> Result<(), JsError> {
++        let doc = wordcraft_engine::io::open_bytes(name, bytes).map_err(err)?;
++        self.session.set_document(doc);
++        self.rev += 1;
++        Ok(())
++    }
++
++    /// The document as a file in the format of `name`'s extension.
++    pub fn save(&mut self, name: &str) -> Result<Vec<u8>, JsError> {
++        // Como Word en cada guardado: fecha, autor y revisión del archivo.
++        self.session.stamp_save();
++        wordcraft_engine::io::save_bytes(name, &self.session.doc).map_err(err)
++    }
++
++    /// El documento quedó guardado (en la nube o descargado): ya no tiene cambios pendientes.
++    pub fn mark_saved(&mut self) {
++        self.session.dirty = false;
++        self.rev += 1;
++    }
++
++    /// Run an engine command (`params` is JSON). Returns the command's JSON result.
++    pub fn run(&mut self, id: &str, params: &str) -> Result<String, JsError> {
++        let v: Value = if params.is_empty() { json!({}) } else { serde_json::from_str(params).map_err(err)? };
++        let out = self.session.run(id, &v).map_err(err)?;
++        self.rev += 1;
++        Ok(out.to_string())
++    }
++
++    /// Bumps on every change to the document, selection or fonts: redraw when it moves.
++    pub fn rev(&mut self) -> f64 {
++        let g = wordcraft_fonts::FontDb::global().generation();
++        if g != self.fonts {
++            self.fonts = g;
++            self.session.relayout();
++            self.rev += 1;
++        }
++        self.rev as f64
++    }
++
++    pub fn page_count(&mut self) -> usize {
++        self.session.layout().pages.len()
++    }
++
++    /// `[width, height]` of a page in points.
++    pub fn page_size(&mut self, page: usize) -> Vec<f32> {
++        self.session.layout().pages.get(page).map(|p| vec![p.w, p.h]).unwrap_or_default()
++    }
++
++    /// The page as straight RGBA, `ceil(width * scale)` pixels wide (`ImageData` order).
++    pub fn render_page(&mut self, page: usize, scale: f32) -> Vec<u8> {
++        let layout = self.session.layout();
++        let Some(p) = layout.pages.get(page) else { return Vec::new() };
++        render_page(&self.session.doc, p, scale, &RenderOptions::default()).to_straight()
++    }
++
++    /// Put the caret at a point of a page (points), or extend the selection to it.
++    pub fn click(&mut self, page: usize, x: f32, y: f32, extend: bool) -> bool {
++        let layout = self.session.layout();
++        let story = self.session.sel.focus.story;
++        let Some(pos) = layout.hit(page, x, y, story) else { return false };
++        self.session.page_hint = page;
++        if extend {
++            self.session.sel.focus = pos;
++        } else {
++            self.session.sel = wordcraft_engine::Selection::caret(pos);
++        }
++        self.session.close_typing();
++        self.rev += 1;
++        true
++    }
++
++    /// `{page, x, top, height}` of the caret, or `null`.
++    pub fn caret(&mut self) -> String {
++        let layout = self.session.layout();
++        match layout.caret_on(&self.session.sel.focus, self.session.page_hint) {
++            Some(c) => json!({"page": c.page, "x": c.x, "top": c.top, "height": c.height}).to_string(),
++            None => "null".into(),
++        }
++    }
++
++    /// `[[page, x, y, w, h], …]` covering the selection (empty when collapsed).
++    pub fn selection_rects(&mut self) -> String {
++        if self.session.sel.is_collapsed() {
++            return "[]".into();
++        }
++        let layout = self.session.layout();
++        let (a, b) = self.session.sel.ordered();
++        let rects: Vec<Value> = layout.selection_rects(&self.session.doc, &a, &b, self.session.page_hint).iter().map(|(p, r)| json!([p, r.x, r.y, r.w, r.h])).collect();
++        Value::Array(rects).to_string()
++    }
++
++    /// What the interface shows: the caret's formatting, undo state, counts.
++    pub fn state(&mut self) -> String {
++        let p = self.session.caret_props();
++        let pages = self.session.layout().pages.len();
++        json!({
++            "bold": p.bold.unwrap_or(false),
++            "italic": p.italic.unwrap_or(false),
++            "underline": p.underline.is_some(),
++            "font": p.font,
++            "size": p.size,
++            "canUndo": self.session.can_undo(),
++            "canRedo": self.session.can_redo(),
++            "dirty": self.session.dirty,
++            "pages": pages,
++            "words": self.session.word_count(),
++            "selection": self.session.selected_text().chars().count(),
++        })
++        .to_string()
++    }
++}
++
++impl From<Session> for Editor {
++    fn from(mut session: Session) -> Editor {
++        let fonts = wordcraft_fonts::FontDb::global().generation();
++        let _ = Arc::strong_count(&session.layout());
++        Editor { session, rev: 1, fonts }
++    }
++}

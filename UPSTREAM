@@ -1,0 +1,6 @@
+# El wordcraft de partida: el parche de parche/ se aplica sobre este commit exacto. Para subir de versión: cambiar COMMIT,
+# comprobar que el parche aplica (scripts/construir.sh lo hace) y publicar una etiqueta nueva.
+REPO=https://github.com/storytold/wordcraft.git
+COMMIT=d1b0bfc3f9dd83126b162a42b667facecb003b7f
+# La versión de wordcraft de ese commit (workspace.package.version); la etiqueta de publicación es v<VERSION>-<n>.
+VERSION=0.9.0
