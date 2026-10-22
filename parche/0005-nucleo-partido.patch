@@ -1,0 +1,858 @@
+diff --git a/Cargo.lock b/Cargo.lock
+index 0372ad4..72298f1 100644
+--- a/Cargo.lock
++++ b/Cargo.lock
+@@ -129,7 +129,7 @@ checksum = "35f0f96ce78e38c3dc6d8948aa8163d06385be74000f3c7a95bf1eef35d3ea32"
+ dependencies = [
+  "cipher",
+  "cpubits",
+- "cpufeatures",
++ "cpufeatures 0.3.1",
+ ]
+ 
+ [[package]]
+@@ -339,6 +339,12 @@ dependencies = [
+  "pin-project-lite",
+ ]
+ 
++[[package]]
++name = "async-once-cell"
++version = "0.5.4"
++source = "registry+https://github.com/rust-lang/crates.io-index"
++checksum = "4288f83726785267c6f2ef073a3d83dc3f9b81464e9f99898240cced85fce35a"
++
+ [[package]]
+ name = "async-process"
+ version = "2.5.0"
+@@ -452,6 +458,12 @@ version = "1.5.1"
+ source = "registry+https://github.com/rust-lang/crates.io-index"
+ checksum = "f2032f911046de80f0a198e0901378627c33f59ea0ac00e363d481118bd70a53"
+ 
++[[package]]
++name = "base16"
++version = "0.2.1"
++source = "registry+https://github.com/rust-lang/crates.io-index"
++checksum = "d27c3610c36aee21ce8ac510e6224498de4228ad772a171ed65643a24693a5a8"
++
+ [[package]]
+ name = "base64"
+ version = "0.22.1"
+@@ -500,6 +512,15 @@ version = "2.13.2"
+ source = "registry+https://github.com/rust-lang/crates.io-index"
+ checksum = "3ded4057c258ba199e2d26386d3af3780957ecaee6c4ef4041c6b4b8b97c0b06"
+ 
++[[package]]
++name = "block-buffer"
++version = "0.10.4"
++source = "registry+https://github.com/rust-lang/crates.io-index"
++checksum = "3078c7629b62d3f0439517fa394996acacc5cbc91c5a20d8c658e77abd503a71"
++dependencies = [
++ "generic-array",
++]
++
+ [[package]]
+ name = "block-buffer"
+ version = "0.12.1"
+@@ -710,7 +731,7 @@ version = "0.5.2"
+ source = "registry+https://github.com/rust-lang/crates.io-index"
+ checksum = "e8cf2a2c93cd704877c0858356ed03480ff301ee950b43f1cbe4573b088bfa6c"
+ dependencies = [
+- "crypto-common",
++ "crypto-common 0.2.2",
+  "inout",
+ ]
+ 
+@@ -851,6 +872,15 @@ version = "0.1.1"
+ source = "registry+https://github.com/rust-lang/crates.io-index"
+ checksum = "15b85f9c39137c3a891689859392b1bd49812121d0d61c9caf00d46ed5ce06ae"
+ 
++[[package]]
++name = "cpufeatures"
++version = "0.2.17"
++source = "registry+https://github.com/rust-lang/crates.io-index"
++checksum = "59ed5838eebb26a2bb2e58f6d5b5316989ae9d08bab10e0e6d103e656d1b0280"
++dependencies = [
++ "libc",
++]
++
+ [[package]]
+ name = "cpufeatures"
+ version = "0.3.1"
+@@ -934,6 +964,16 @@ version = "0.2.4"
+ source = "registry+https://github.com/rust-lang/crates.io-index"
+ checksum = "460fbee9c2c2f33933d720630a6a0bac33ba7053db5344fac858d4b8952d77d5"
+ 
++[[package]]
++name = "crypto-common"
++version = "0.1.7"
++source = "registry+https://github.com/rust-lang/crates.io-index"
++checksum = "78c8292055d1c1df0cce5d180393dc8cce0abec0a7102adb6c7b1eef6016d60a"
++dependencies = [
++ "generic-array",
++ "typenum",
++]
++
+ [[package]]
+ name = "crypto-common"
+ version = "0.2.2"
+@@ -982,15 +1022,25 @@ dependencies = [
+  "rayon",
+ ]
+ 
++[[package]]
++name = "digest"
++version = "0.10.7"
++source = "registry+https://github.com/rust-lang/crates.io-index"
++checksum = "9ed9a281f7bc9b7576e61468ba615a66a5c8cfdff42420a70aa82701a3b1e292"
++dependencies = [
++ "block-buffer 0.10.4",
++ "crypto-common 0.1.7",
++]
++
+ [[package]]
+ name = "digest"
+ version = "0.11.3"
+ source = "registry+https://github.com/rust-lang/crates.io-index"
+ checksum = "f1dd6dbb5841937940781866fa1281a1ff7bd3bf827091440879f9994983d5c2"
+ dependencies = [
+- "block-buffer",
++ "block-buffer 0.12.1",
+  "const-oid",
+- "crypto-common",
++ "crypto-common 0.2.2",
+  "ctutils",
+ ]
+ 
+@@ -1536,6 +1586,16 @@ dependencies = [
+  "slab",
+ ]
+ 
++[[package]]
++name = "generic-array"
++version = "0.14.7"
++source = "registry+https://github.com/rust-lang/crates.io-index"
++checksum = "85649ca51fd72272d7821adaf274ad91c288277713d9c18820d8499a7ff69e9a"
++dependencies = [
++ "typenum",
++ "version_check",
++]
++
+ [[package]]
+ name = "gethostname"
+ version = "1.1.0"
+@@ -1901,7 +1961,7 @@ version = "0.13.0"
+ source = "registry+https://github.com/rust-lang/crates.io-index"
+ checksum = "6303bc9732ae41b04cb554b844a762b4115a61bfaa81e3e83050991eeb56863f"
+ dependencies = [
+- "digest",
++ "digest 0.11.3",
+ ]
+ 
+ [[package]]
+@@ -2883,7 +2943,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
+ checksum = "7d8fae84b431384b68627d0f9b3b1245fcf9f46f6c0e3dc902e9dce64edd1967"
+ dependencies = [
+  "libc",
+- "windows-sys 0.52.0",
++ "windows-sys 0.61.2",
+ ]
+ 
+ [[package]]
+@@ -3633,8 +3693,19 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
+ checksum = "aacc4cc499359472b4abe1bf11d0b12e688af9a805fa5e3016f9a386dc2d0214"
+ dependencies = [
+  "cfg-if",
+- "cpufeatures",
+- "digest",
++ "cpufeatures 0.3.1",
++ "digest 0.11.3",
++]
++
++[[package]]
++name = "sha2"
++version = "0.10.9"
++source = "registry+https://github.com/rust-lang/crates.io-index"
++checksum = "a7507d819769d01a365ab707794a4084392c824f54a7a6a7862f8c3d0892b283"
++dependencies = [
++ "cfg-if",
++ "cpufeatures 0.2.17",
++ "digest 0.10.7",
+ ]
+ 
+ [[package]]
+@@ -3644,8 +3715,8 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
+ checksum = "446ba717509524cb3f22f17ecc096f10f4822d76ab5c0b9822c5f9c284e825f4"
+ dependencies = [
+  "cfg-if",
+- "cpufeatures",
+- "digest",
++ "cpufeatures 0.3.1",
++ "digest 0.11.3",
+ ]
+ 
+ [[package]]
+@@ -4391,6 +4462,28 @@ dependencies = [
+  "unicode-ident",
+ ]
+ 
++[[package]]
++name = "wasm_split_helpers"
++version = "0.2.3"
++source = "registry+https://github.com/rust-lang/crates.io-index"
++checksum = "ab578aae2fe2916edaea06843187d50f87b0965622da0ceef648edca27b385ba"
++dependencies = [
++ "async-once-cell",
++ "wasm_split_macros",
++]
++
++[[package]]
++name = "wasm_split_macros"
++version = "0.2.2"
++source = "registry+https://github.com/rust-lang/crates.io-index"
++checksum = "3e653af7ee4a9ef0fce481a9ec6f43cb78de20d0cdb4f4f5862e1dc6e407e6c8"
++dependencies = [
++ "base16",
++ "quote",
++ "sha2 0.10.9",
++ "syn 2.0.119",
++]
++
+ [[package]]
+ name = "wayland-backend"
+ version = "0.3.17"
+@@ -5223,7 +5316,7 @@ dependencies = [
+  "proptest",
+  "quick-xml",
+  "sha1",
+- "sha2",
++ "sha2 0.11.0",
+  "thiserror 2.0.21",
+  "unicode-bidi",
+  "wordcraft-doc",
+@@ -5438,14 +5531,16 @@ dependencies = [
+ name = "wordcraft-web-core"
+ version = "0.9.0"
+ dependencies = [
+- "js-sys",
+  "log",
+  "serde_json",
+  "wasm-bindgen",
++ "wasm-bindgen-futures",
++ "wasm_split_helpers",
+  "wordcraft-engine",
+- "wordcraft-extdata",
+  "wordcraft-fonts",
+  "wordcraft-geom",
++ "wordcraft-proof",
++ "wordcraft-web-vista",
+ ]
+ 
+ [[package]]
+diff --git a/crates/web-core/Cargo.toml b/crates/web-core/Cargo.toml
+index 1b56e49..78e75f3 100644
+--- a/crates/web-core/Cargo.toml
++++ b/crates/web-core/Cargo.toml
+@@ -1,25 +1,27 @@
+ [package]
+ name = "wordcraft-web-core"
+-description = "WordCraft for the browser without a Rust UI: the engine, layout and page rasteriser behind a wasm-bindgen API for an HTML front end"
++description = "WordCraft for the browser without a Rust UI: the viewer and, as a deferred wasm-split chunk, the editing engine behind a wasm-bindgen API for an HTML front end"
+ version.workspace = true
+-edition.workspace = true
++# 2021 and without the workspace lints: the `wasm_split` macro emits `extern` blocks without `unsafe`, which edition 2024
++# and `unsafe_code = "forbid"` reject.
++edition = "2021"
+ license.workspace = true
+ publish = false
+ 
+ [lib]
+-crate-type = ["cdylib", "rlib"]
+-
+-[lints]
+-workspace = true
++# Solo cdylib: con rlib además, el LTO deja ~0,2 MB más (brotli) entre el principal y el trozo.
++crate-type = ["cdylib"]
+ 
+ [dependencies]
++wordcraft-web-vista = { workspace = true }
+ wordcraft-engine = { workspace = true }
++wordcraft-proof = { workspace = true }
+ wordcraft-fonts = { workspace = true }
+-wordcraft-extdata = { workspace = true }
+ wordcraft-geom = { workspace = true }
+ serde_json = { workspace = true }
+ log = { workspace = true }
+ 
+ [target.'cfg(target_arch = "wasm32")'.dependencies]
+ wasm-bindgen = "0.2"
+-js-sys = "0.3"
++wasm-bindgen-futures = "0.4"
++wasm_split_helpers = "=0.2.3"
+diff --git a/crates/web-core/src/lib.rs b/crates/web-core/src/lib.rs
+index 8a3d4ec..975baea 100644
+--- a/crates/web-core/src/lib.rs
++++ b/crates/web-core/src/lib.rs
+@@ -1,257 +1,134 @@
+-//! The editor behind an HTML front end. The page owns the interface (ribbon, dialogs, status bar)
+-//! and the input events; this crate owns the document: it runs engine commands, lays the document
+-//! out and rasterises pages for `<canvas>`, and answers where the caret and selection are.
++//! WordCraft for the browser without a Rust UI, as one wasm that `wasm-split` cuts in two. The main module is the viewer
++//! (`wordcraft-web-vista`: open a Word file, lay it out, rasterise its pages) plus the shell of [`Editor`]; the editing
++//! engine sits behind the `editor` split point and arrives as a separate chunk the first time an [`Editor`] is created,
++//! without repeating what the viewer already brought (document model, docx, layout, render, fonts).
+ //!
+-//! Every action is an engine command (`format.bold`, `caret.left`, `text.insert`…), so the front
+-//! end drives the editor with [`Editor::run`] and reads [`Editor::state`] back.
++//! Every action is an engine command (`format.bold`, `caret.left`, `text.insert`…), so the front end drives the editor
++//! with [`Editor::run`] and reads [`Editor::state`] back.
+ //!
+-//! Data files (the Source Sans face, hyphenation) are fetched by the page and handed over with
+-//! [`provide_file`]; faces text needs later are listed by [`wanted_files`] and added with
+-//! [`add_lazy_font`].
++//! Data files work as in the viewer: the page fetches [`core_files`] and hands them over with [`provide_file`]; what
++//! text needs later is listed by [`wanted_files`] and added with [`add_lazy_font`] or [`add_data_file`].
+ #![cfg(target_arch = "wasm32")]
+ #![deny(clippy::unwrap_used, clippy::expect_used, clippy::panic)]
+ 
+-use std::sync::Arc;
+-
+-use serde_json::{Value, json};
+ use wasm_bindgen::prelude::*;
+-use wordcraft_engine::Session;
+-use wordcraft_engine::doc::{Align, PartKind, StoryRef};
+-use wordcraft_engine::render::{RenderOptions, render_page};
+-use wordcraft_geom::Region;
++use wasm_split_helpers::wasm_split;
++
++pub use wordcraft_web_vista::*;
++
++mod motor;
++
++/// What the shell asks of the editing engine; the implementation lives in the deferred chunk.
++pub trait Motor {
++    fn open(&mut self, name: &str, bytes: &[u8]) -> Result<(), String>;
++    fn save(&mut self, name: &str) -> Result<Vec<u8>, String>;
++    fn mark_saved(&mut self);
++    fn run(&mut self, id: &str, params: &str) -> Result<String, String>;
++    fn rev(&mut self) -> f64;
++    fn page_count(&mut self) -> usize;
++    fn page_size(&mut self, page: usize) -> Vec<f32>;
++    fn render_page(&mut self, page: usize, scale: f32) -> Vec<u8>;
++    fn click(&mut self, page: usize, x: f32, y: f32, extend: bool) -> bool;
++    fn caret(&mut self) -> String;
++    fn selection_rects(&mut self) -> String;
++    fn state(&mut self) -> String;
++}
+ 
+-fn err(e: impl std::fmt::Display) -> JsError {
+-    JsError::new(&e.to_string())
++#[wasm_split(editor)]
++fn motor_nuevo(locale: String) -> Box<dyn Motor> {
++    Box::new(motor::Edicion::new(&locale))
+ }
+ 
+-/// Files the page must fetch (under its `assets/` folder) before creating an [`Editor`].
+-#[wasm_bindgen]
+-pub fn core_files() -> Vec<String> {
+-    // Only the fallback face: hyphenation and the English dictionary come when text first needs them.
+-    vec!["fonts/SourceSans3-Regular.ttf".to_string()]
++#[wasm_split(editor)]
++fn motor_ejemplo() -> Box<dyn Motor> {
++    Box::new(motor::Edicion::sample())
+ }
+ 
+ /// Proof text that has no language of its own in the language of `tag` (`es-CL`): the page sets it once, before creating
+ /// an editor. Without it, such text is English, as on desktop.
+ #[wasm_bindgen]
+ pub fn set_default_language(tag: &str) {
+-    wordcraft_engine::proof::lang::set_default_language(wordcraft_engine::proof::ProofLang::from_tag(Some(tag)));
+-}
+-
+-/// Hand over a fetched data file under its asset-relative name.
+-#[wasm_bindgen]
+-pub fn provide_file(name: &str, bytes: Vec<u8>) {
+-    wordcraft_extdata::provide(name, bytes);
+-}
+-
+-/// Files the editor asked for since the last call (faces a document started using).
+-#[wasm_bindgen]
+-pub fn wanted_files() -> Vec<String> {
+-    wordcraft_extdata::take_requests()
++    wordcraft_proof::lang::set_default_language(wordcraft_proof::ProofLang::from_tag(Some(tag)));
+ }
+ 
+-/// Add a data file the page fetched on request (hyphenation, dictionary): text is checked and
+-/// laid out again with it (see [`Editor::rev`]).
+ #[wasm_bindgen]
+-pub fn add_data_file(name: &str, bytes: Vec<u8>) {
+-    wordcraft_extdata::provide(name, bytes);
+-    wordcraft_engine::proof::data_arrived();
++pub struct Editor {
++    motor: Box<dyn Motor>,
+ }
+ 
+-/// Add a face the page fetched on request; open documents lay out again (see [`Editor::rev`]).
+-#[wasm_bindgen]
+-pub fn add_lazy_font(bytes: Vec<u8>) -> usize {
+-    wordcraft_fonts::FontDb::global().add_lazy_bundled(bytes)
+-}
+-
+-#[wasm_bindgen]
+-pub struct Editor {
+-    session: Session,
+-    /// Changes whenever something the page shows could have changed.
+-    rev: u64,
+-    fonts: u64,
+-    proofing: u64,
++fn err(e: String) -> JsError {
++    JsError::new(&e)
+ }
+ 
+ #[wasm_bindgen]
+ impl Editor {
+     /// A blank document on the paper of `locale` (`es-CL`: Letter), written in that language: its text is proofed in it.
+-    #[wasm_bindgen(constructor)]
+-    pub fn new(locale: &str) -> Editor {
+-        let region = Region::from_tag(locale);
+-        let mut doc = wordcraft_engine::blank_document(&region);
+-        // The document's default language (a new document has en-US): what its text is proofed in.
+-        doc.styles.default_chr.lang = wordcraft_engine::proof::lang::normalize_tag(locale).or_else(|| Some(locale.to_string()));
+-        let mut session = Session::new(doc);
+-        session.system_region = region;
+-        Editor::from(session)
++    /// The first call fetches the editor's chunk.
++    pub async fn create(locale: String) -> Editor {
++        Editor { motor: motor_nuevo(locale).await }
+     }
+ 
+     /// The sample document.
+-    pub fn sample() -> Editor {
+-        Editor::from(Session::new(wordcraft_engine::sample::sample_document()))
++    pub async fn sample() -> Editor {
++        Editor { motor: motor_ejemplo().await }
+     }
+ 
+     /// Replace the document with a file's contents (`.docx`, `.odt`, `.rtf`, `.txt`…, by name).
+     pub fn open(&mut self, name: &str, bytes: &[u8]) -> Result<(), JsError> {
+-        let doc = wordcraft_engine::io::open_bytes(name, bytes).map_err(err)?;
+-        self.session.set_document(doc);
+-        self.rev += 1;
+-        Ok(())
++        self.motor.open(name, bytes).map_err(err)
+     }
+ 
+     /// The document as a file in the format of `name`'s extension.
+     pub fn save(&mut self, name: &str) -> Result<Vec<u8>, JsError> {
+-        // Como Word en cada guardado: fecha, autor y revisión del archivo.
+-        self.session.stamp_save();
+-        wordcraft_engine::io::save_bytes(name, &self.session.doc).map_err(err)
++        self.motor.save(name).map_err(err)
+     }
+ 
+     /// El documento quedó guardado (en la nube o descargado): ya no tiene cambios pendientes.
+     pub fn mark_saved(&mut self) {
+-        self.session.dirty = false;
+-        self.rev += 1;
++        self.motor.mark_saved()
+     }
+ 
+     /// Run an engine command (`params` is JSON). Returns the command's JSON result.
+     pub fn run(&mut self, id: &str, params: &str) -> Result<String, JsError> {
+-        let v: Value = if params.is_empty() { json!({}) } else { serde_json::from_str(params).map_err(err)? };
+-        let out = self.session.run(id, &v).map_err(err)?;
+-        self.rev += 1;
+-        Ok(out.to_string())
++        self.motor.run(id, params).map_err(err)
+     }
+ 
+     /// Bumps on every change to the document, selection or fonts: redraw when it moves.
+     pub fn rev(&mut self) -> f64 {
+-        let g = wordcraft_fonts::FontDb::global().generation();
+-        let p = wordcraft_engine::proof::dictionary_generation();
+-        if g != self.fonts || p != self.proofing {
+-            self.fonts = g;
+-            self.proofing = p;
+-            self.session.relayout();
+-            self.rev += 1;
+-        }
+-        self.rev as f64
++        self.motor.rev()
+     }
+ 
+     pub fn page_count(&mut self) -> usize {
+-        self.session.layout().pages.len()
++        self.motor.page_count()
+     }
+ 
+     /// `[width, height]` of a page in points.
+     pub fn page_size(&mut self, page: usize) -> Vec<f32> {
+-        self.session.layout().pages.get(page).map(|p| vec![p.w, p.h]).unwrap_or_default()
++        self.motor.page_size(page)
+     }
+ 
+     /// The page as straight RGBA, `ceil(width * scale)` pixels wide (`ImageData` order).
+     pub fn render_page(&mut self, page: usize, scale: f32) -> Vec<u8> {
+-        let layout = self.session.layout();
+-        let Some(p) = layout.pages.get(page) else { return Vec::new() };
+-        // Con el engrosado de texto de pantalla (como dibuja macOS): el PDF y la impresión no pasan por aquí y quedan exactos.
+-        render_page(&self.session.doc, p, scale, &RenderOptions { text_darkening: true, ..Default::default() }).to_straight()
++        self.motor.render_page(page, scale)
+     }
+ 
+     /// Put the caret at a point of a page (points), or extend the selection to it.
+     pub fn click(&mut self, page: usize, x: f32, y: f32, extend: bool) -> bool {
+-        let layout = self.session.layout();
+-        let story = self.session.sel.focus.story;
+-        let Some(pos) = layout.hit(page, x, y, story) else { return false };
+-        self.session.page_hint = page;
+-        if extend {
+-            self.session.sel.focus = pos;
+-        } else {
+-            self.session.sel = wordcraft_engine::Selection::caret(pos);
+-        }
+-        self.session.close_typing();
+-        self.rev += 1;
+-        true
++        self.motor.click(page, x, y, extend)
+     }
+ 
+     /// `{page, x, top, height}` of the caret, or `null`.
+     pub fn caret(&mut self) -> String {
+-        let layout = self.session.layout();
+-        match layout.caret_on(&self.session.sel.focus, self.session.page_hint) {
+-            Some(c) => json!({"page": c.page, "x": c.x, "top": c.top, "height": c.height}).to_string(),
+-            None => "null".into(),
+-        }
++        self.motor.caret()
+     }
+ 
+     /// `[[page, x, y, w, h], …]` covering the selection (empty when collapsed).
+     pub fn selection_rects(&mut self) -> String {
+-        if self.session.sel.is_collapsed() {
+-            return "[]".into();
+-        }
+-        let layout = self.session.layout();
+-        let (a, b) = self.session.sel.ordered();
+-        let rects: Vec<Value> = layout.selection_rects(&self.session.doc, &a, &b, self.session.page_hint).iter().map(|(p, r)| json!([p, r.x, r.y, r.w, r.h])).collect();
+-        Value::Array(rects).to_string()
++        self.motor.selection_rects()
+     }
+ 
+-    /// What the interface shows: the formatting at the caret (as the styles resolve it, so a heading shows its own font and
+-    /// size, not only direct formatting), the paragraph's alignment, where the caret is, undo state, counts.
++    /// What the interface shows: formatting at the caret, alignment, story, section, undo state, counts.
+     pub fn state(&mut self) -> String {
+-        let pages = self.session.layout().pages.len();
+-        // `format.state` only reads: it is what the desktop ribbon shows. Mixed values come back null.
+-        let f = self.session.run("format.state", &json!({})).unwrap_or(Value::Null);
+-        // Del primer párrafo de la selección (como Word): una selección que termina al inicio del párrafo siguiente (un triple
+-        // clic) no debe mostrar la alineación de ese.
+-        let start = self.session.sel.ordered().0;
+-        let align = self
+-            .session
+-            .doc
+-            .para_at(&start)
+-            .map(|p| match self.session.doc.styles.resolve_para(&p.props).align {
+-                Align::Left => "left",
+-                Align::Center => "center",
+-                Align::Right => "right",
+-                Align::Justify | Align::Distribute => "justify",
+-            })
+-            .unwrap_or("left");
+-        let story = match self.session.sel.focus.story {
+-            StoryRef::Body => "body",
+-            StoryRef::Part(id) => match self.session.doc.parts.get(&id).map(|p| &p.kind) {
+-                Some(PartKind::Header) => "header",
+-                Some(PartKind::Footer) => "footer",
+-                _ => "other",
+-            },
+-        };
+-        // La sección del cursor (en puntos): lo que dibujan las reglas y lo que lee «Primera página diferente».
+-        let sec = self.session.run("layout.section", &json!({})).unwrap_or(Value::Null);
+-        json!({
+-            "section": {
+-                "pageW": sec["pageW"],
+-                "pageH": sec["pageH"],
+-                "top": sec["marginTop"],
+-                "bottom": sec["marginBottom"],
+-                "left": sec["marginLeft"],
+-                "right": sec["marginRight"],
+-                "diffFirst": sec["titlePage"],
+-            },
+-            "bold": f["bold"],
+-            "italic": f["italic"],
+-            "underline": f["underline"],
+-            "strike": f["strike"],
+-            "font": f["font"],
+-            "size": f["size"],
+-            "color": f["color"],
+-            "align": align,
+-            "story": story,
+-            "canUndo": self.session.can_undo(),
+-            "canRedo": self.session.can_redo(),
+-            "dirty": self.session.dirty,
+-            "pages": pages,
+-            "words": self.session.word_count(),
+-            "selection": self.session.selected_text().chars().count(),
+-        })
+-        .to_string()
+-    }
+-}
+-
+-impl From<Session> for Editor {
+-    fn from(mut session: Session) -> Editor {
+-        let fonts = wordcraft_fonts::FontDb::global().generation();
+-        let proofing = wordcraft_engine::proof::dictionary_generation();
+-        let _ = Arc::strong_count(&session.layout());
+-        Editor { session, rev: 1, fonts, proofing }
++        self.motor.state()
+     }
+ }
+diff --git a/crates/web-core/src/motor.rs b/crates/web-core/src/motor.rs
+new file mode 100644
+index 0000000..d37858e
+--- /dev/null
++++ b/crates/web-core/src/motor.rs
+@@ -0,0 +1,242 @@
++//! El motor de edición: lo que antes exportaba `Editor` directamente. Solo se llega aquí por los puntos de corte de
++//! `lib.rs`, así que esto y lo que arrastra (el motor, serde, regex, los otros formatos, el PDF) va en el trozo diferido.
++
++use std::sync::Arc;
++
++use serde_json::{Value, json};
++use wordcraft_engine::Session;
++use wordcraft_engine::doc::{Align, PartKind, StoryRef};
++use wordcraft_engine::render::{RenderOptions, render_page};
++use wordcraft_geom::Region;
++
++fn err(e: impl std::fmt::Display) -> String {
++    e.to_string()
++}
++
++pub struct Edicion {
++    session: Session,
++    /// Changes whenever something the page shows could have changed.
++    rev: u64,
++    fonts: u64,
++    proofing: u64,
++}
++
++impl Edicion {
++    /// A blank document on the paper of `locale` (`es-CL`: Letter), written in that language: its text is proofed in it.
++    pub fn new(locale: &str) -> Edicion {
++        let region = Region::from_tag(locale);
++        let mut doc = wordcraft_engine::blank_document(&region);
++        // The document's default language (a new document has en-US): what its text is proofed in.
++        doc.styles.default_chr.lang = wordcraft_engine::proof::lang::normalize_tag(locale).or_else(|| Some(locale.to_string()));
++        let mut session = Session::new(doc);
++        session.system_region = region;
++        Edicion::from(session)
++    }
++
++    /// The sample document.
++    pub fn sample() -> Edicion {
++        Edicion::from(Session::new(wordcraft_engine::sample::sample_document()))
++    }
++
++    /// Replace the document with a file's contents (`.docx`, `.odt`, `.rtf`, `.txt`…, by name).
++    pub fn open(&mut self, name: &str, bytes: &[u8]) -> Result<(), String> {
++        let doc = wordcraft_engine::io::open_bytes(name, bytes).map_err(err)?;
++        self.session.set_document(doc);
++        self.rev += 1;
++        Ok(())
++    }
++
++    /// The document as a file in the format of `name`'s extension.
++    pub fn save(&mut self, name: &str) -> Result<Vec<u8>, String> {
++        // Como Word en cada guardado: fecha, autor y revisión del archivo.
++        self.session.stamp_save();
++        wordcraft_engine::io::save_bytes(name, &self.session.doc).map_err(err)
++    }
++
++    /// El documento quedó guardado (en la nube o descargado): ya no tiene cambios pendientes.
++    pub fn mark_saved(&mut self) {
++        self.session.dirty = false;
++        self.rev += 1;
++    }
++
++    /// Run an engine command (`params` is JSON). Returns the command's JSON result.
++    pub fn run(&mut self, id: &str, params: &str) -> Result<String, String> {
++        let v: Value = if params.is_empty() { json!({}) } else { serde_json::from_str(params).map_err(err)? };
++        let out = self.session.run(id, &v).map_err(err)?;
++        self.rev += 1;
++        Ok(out.to_string())
++    }
++
++    /// Bumps on every change to the document, selection or fonts: redraw when it moves.
++    pub fn rev(&mut self) -> f64 {
++        let g = wordcraft_fonts::FontDb::global().generation();
++        let p = wordcraft_engine::proof::dictionary_generation();
++        if g != self.fonts || p != self.proofing {
++            self.fonts = g;
++            self.proofing = p;
++            self.session.relayout();
++            self.rev += 1;
++        }
++        self.rev as f64
++    }
++
++    pub fn page_count(&mut self) -> usize {
++        self.session.layout().pages.len()
++    }
++
++    /// `[width, height]` of a page in points.
++    pub fn page_size(&mut self, page: usize) -> Vec<f32> {
++        self.session.layout().pages.get(page).map(|p| vec![p.w, p.h]).unwrap_or_default()
++    }
++
++    /// The page as straight RGBA, `ceil(width * scale)` pixels wide (`ImageData` order).
++    pub fn render_page(&mut self, page: usize, scale: f32) -> Vec<u8> {
++        let layout = self.session.layout();
++        let Some(p) = layout.pages.get(page) else { return Vec::new() };
++        // Con el engrosado de texto de pantalla (como dibuja macOS): el PDF y la impresión no pasan por aquí y quedan exactos.
++        render_page(&self.session.doc, p, scale, &RenderOptions { text_darkening: true, ..Default::default() }).to_straight()
++    }
++
++    /// Put the caret at a point of a page (points), or extend the selection to it.
++    pub fn click(&mut self, page: usize, x: f32, y: f32, extend: bool) -> bool {
++        let layout = self.session.layout();
++        let story = self.session.sel.focus.story;
++        let Some(pos) = layout.hit(page, x, y, story) else { return false };
++        self.session.page_hint = page;
++        if extend {
++            self.session.sel.focus = pos;
++        } else {
++            self.session.sel = wordcraft_engine::Selection::caret(pos);
++        }
++        self.session.close_typing();
++        self.rev += 1;
++        true
++    }
++
++    /// `{page, x, top, height}` of the caret, or `null`.
++    pub fn caret(&mut self) -> String {
++        let layout = self.session.layout();
++        match layout.caret_on(&self.session.sel.focus, self.session.page_hint) {
++            Some(c) => json!({"page": c.page, "x": c.x, "top": c.top, "height": c.height}).to_string(),
++            None => "null".into(),
++        }
++    }
++
++    /// `[[page, x, y, w, h], …]` covering the selection (empty when collapsed).
++    pub fn selection_rects(&mut self) -> String {
++        if self.session.sel.is_collapsed() {
++            return "[]".into();
++        }
++        let layout = self.session.layout();
++        let (a, b) = self.session.sel.ordered();
++        let rects: Vec<Value> = layout.selection_rects(&self.session.doc, &a, &b, self.session.page_hint).iter().map(|(p, r)| json!([p, r.x, r.y, r.w, r.h])).collect();
++        Value::Array(rects).to_string()
++    }
++
++    /// What the interface shows: the formatting at the caret (as the styles resolve it, so a heading shows its own font and
++    /// size, not only direct formatting), the paragraph's alignment, where the caret is, undo state, counts.
++    pub fn state(&mut self) -> String {
++        let pages = self.session.layout().pages.len();
++        // `format.state` only reads: it is what the desktop ribbon shows. Mixed values come back null.
++        let f = self.session.run("format.state", &json!({})).unwrap_or(Value::Null);
++        // Del primer párrafo de la selección (como Word): una selección que termina al inicio del párrafo siguiente (un triple
++        // clic) no debe mostrar la alineación de ese.
++        let start = self.session.sel.ordered().0;
++        let align = self
++            .session
++            .doc
++            .para_at(&start)
++            .map(|p| match self.session.doc.styles.resolve_para(&p.props).align {
++                Align::Left => "left",
++                Align::Center => "center",
++                Align::Right => "right",
++                Align::Justify | Align::Distribute => "justify",
++            })
++            .unwrap_or("left");
++        let story = match self.session.sel.focus.story {
++            StoryRef::Body => "body",
++            StoryRef::Part(id) => match self.session.doc.parts.get(&id).map(|p| &p.kind) {
++                Some(PartKind::Header) => "header",
++                Some(PartKind::Footer) => "footer",
++                _ => "other",
++            },
++        };
++        // La sección del cursor (en puntos): lo que dibujan las reglas y lo que lee «Primera página diferente».
++        let sec = self.session.run("layout.section", &json!({})).unwrap_or(Value::Null);
++        json!({
++            "section": {
++                "pageW": sec["pageW"],
++                "pageH": sec["pageH"],
++                "top": sec["marginTop"],
++                "bottom": sec["marginBottom"],
++                "left": sec["marginLeft"],
++                "right": sec["marginRight"],
++                "diffFirst": sec["titlePage"],
++            },
++            "bold": f["bold"],
++            "italic": f["italic"],
++            "underline": f["underline"],
++            "strike": f["strike"],
++            "font": f["font"],
++            "size": f["size"],
++            "color": f["color"],
++            "align": align,
++            "story": story,
++            "canUndo": self.session.can_undo(),
++            "canRedo": self.session.can_redo(),
++            "dirty": self.session.dirty,
++            "pages": pages,
++            "words": self.session.word_count(),
++            "selection": self.session.selected_text().chars().count(),
++        })
++        .to_string()
++    }
++}
++
++impl From<Session> for Edicion {
++    fn from(mut session: Session) -> Edicion {
++        let fonts = wordcraft_fonts::FontDb::global().generation();
++        let proofing = wordcraft_engine::proof::dictionary_generation();
++        let _ = Arc::strong_count(&session.layout());
++        Edicion { session, rev: 1, fonts, proofing }
++    }
++}
++
++impl crate::Motor for Edicion {
++    fn open(&mut self, name: &str, bytes: &[u8]) -> Result<(), String> {
++        Edicion::open(self, name, bytes)
++    }
++    fn save(&mut self, name: &str) -> Result<Vec<u8>, String> {
++        Edicion::save(self, name)
++    }
++    fn mark_saved(&mut self) {
++        Edicion::mark_saved(self)
++    }
++    fn run(&mut self, id: &str, params: &str) -> Result<String, String> {
++        Edicion::run(self, id, params)
++    }
++    fn rev(&mut self) -> f64 {
++        Edicion::rev(self)
++    }
++    fn page_count(&mut self) -> usize {
++        Edicion::page_count(self)
++    }
++    fn page_size(&mut self, page: usize) -> Vec<f32> {
++        Edicion::page_size(self, page)
++    }
++    fn render_page(&mut self, page: usize, scale: f32) -> Vec<u8> {
++        Edicion::render_page(self, page, scale)
++    }
++    fn click(&mut self, page: usize, x: f32, y: f32, extend: bool) -> bool {
++        Edicion::click(self, page, x, y, extend)
++    }
++    fn caret(&mut self) -> String {
++        Edicion::caret(self)
++    }
++    fn selection_rects(&mut self) -> String {
++        Edicion::selection_rects(self)
++    }
++    fn state(&mut self) -> String {
++        Edicion::state(self)
++    }
++}

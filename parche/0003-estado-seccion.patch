@@ -1,0 +1,22 @@
+diff --git a/crates/web-core/src/lib.rs b/crates/web-core/src/lib.rs
+--- a/crates/web-core/src/lib.rs
++++ b/crates/web-core/src/lib.rs
+@@ -214,7 +214,18 @@
+                 _ => "other",
+             },
+         };
++        // La sección del cursor (en puntos): lo que dibujan las reglas y lo que lee «Primera página diferente».
++        let sec = self.session.run("layout.section", &json!({})).unwrap_or(Value::Null);
+         json!({
++            "section": {
++                "pageW": sec["pageW"],
++                "pageH": sec["pageH"],
++                "top": sec["marginTop"],
++                "bottom": sec["marginBottom"],
++                "left": sec["marginLeft"],
++                "right": sec["marginRight"],
++                "diffFirst": sec["titlePage"],
++            },
+             "bold": f["bold"],
+             "italic": f["italic"],
+             "underline": f["underline"],

@@ -1,0 +1,26 @@
+diff --git a/crates/web-core/src/lib.rs b/crates/web-core/src/lib.rs
+--- a/crates/web-core/src/lib.rs
++++ b/crates/web-core/src/lib.rs
+@@ -147,7 +147,8 @@
+     pub fn render_page(&mut self, page: usize, scale: f32) -> Vec<u8> {
+         let layout = self.session.layout();
+         let Some(p) = layout.pages.get(page) else { return Vec::new() };
+-        render_page(&self.session.doc, p, scale, &RenderOptions::default()).to_straight()
++        // Con el engrosado de texto de pantalla (como dibuja macOS): el PDF y la impresión no pasan por aquí y quedan exactos.
++        render_page(&self.session.doc, p, scale, &RenderOptions { text_darkening: true, ..Default::default() }).to_straight()
+     }
+ 
+     /// Put the caret at a point of a page (points), or extend the selection to it.
+diff --git a/crates/web-vista/src/lib.rs b/crates/web-vista/src/lib.rs
+--- a/crates/web-vista/src/lib.rs
++++ b/crates/web-vista/src/lib.rs
+@@ -123,7 +123,8 @@
+     pub fn render_page(&mut self, page: usize, scale: f32) -> Vec<u8> {
+         let layout = self.layout();
+         let Some(p) = layout.pages.get(page) else { return Vec::new() };
+-        render_page(&self.doc, p, scale, &RenderOptions::default()).to_straight()
++        // Con el engrosado de texto de pantalla (como dibuja macOS): el PDF y la impresión no pasan por aquí y quedan exactos.
++        render_page(&self.doc, p, scale, &RenderOptions { text_darkening: true, ..Default::default() }).to_straight()
+     }
+ }
+ 
