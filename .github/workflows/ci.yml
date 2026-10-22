@@ -30,15 +30,18 @@ jobs:
       - uses: dtolnay/rust-toolchain@stable
         with:
           targets: wasm32-unknown-unknown
-      # wasm-bindgen-cli y wasm-opt tardan en compilarse: se guardan entre ejecuciones.
+      # wasm-bindgen-cli, wasm-opt y wasm-split-cli tardan en compilarse: se guardan entre ejecuciones.
       - uses: actions/cache@v4
         with:
           path: |
             ~/.cargo/bin/wasm-bindgen
             ~/.cargo/bin/wasm-opt
+            ~/.cargo/bin/wasm-split-cli
+            ~/.cargo/.crates.toml
+            ~/.cargo/.crates2.json
             ~/.cargo/registry
             ~/.cargo/git
-          key: nucleo-herramientas-${{ runner.os }}-${{ hashFiles('UPSTREAM') }}
+          key: nucleo-herramientas-${{ runner.os }}-${{ hashFiles('UPSTREAM', 'scripts/construir.sh') }}
       - name: Versión
         id: version
         run: |
