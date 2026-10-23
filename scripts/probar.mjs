@@ -8,6 +8,25 @@ import { pathToFileURL } from "node:url";
 
 const dir = process.argv[2];
 if (!dir) throw new Error("uso: probar.mjs <carpeta del paquete>");
+// Lo comprimido que trae el paquete (.br y .gz junto a cada wasm y dato) descomprime a los mismos bytes que el original.
+{
+  const { gunzipSync, brotliDecompressSync } = await import("node:zlib");
+  const { readdirSync, statSync } = await import("node:fs");
+  let n = 0;
+  (function recorrer(d) {
+    for (const f of readdirSync(d)) {
+      const ruta = join(d, f);
+      if (statSync(ruta).isDirectory()) recorrer(ruta);
+      else if (f.endsWith(".br") || f.endsWith(".gz")) {
+        const original = readFileSync(ruta.slice(0, -3));
+        const dec = f.endsWith(".br") ? brotliDecompressSync(readFileSync(ruta)) : gunzipSync(readFileSync(ruta));
+        assert.ok(dec.equals(original), `${f} no descomprime al original`);
+        n++;
+      }
+    }
+  })(dir);
+  assert.ok(n > 0, "el paquete no trae archivos comprimidos (.br/.gz)");
+}
 // El cargador de trozos los pide con fetch(new URL(…, import.meta.url)): en Node, un file:// se lee del disco.
 const trozos = [];
 const fetchRed = globalThis.fetch;

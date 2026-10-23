@@ -33,7 +33,8 @@ scripts/construir.sh 0.9.0-1               # salida/wordcraft-nucleo-web-0.9.0-1
 
 La primera vez instala `wasm-bindgen-cli` (de la versión que fija el `Cargo.lock` de wordcraft), `wasm-opt` y `wasm-split-cli`
 (`wasm_split_cli_support`). Tarda unos minutos. La cadena es: `cargo build` con `--emit-relocs` → `wasm-split-cli` →
-`wasm-bindgen --keep-lld-exports` sobre el principal (el trozo importa su tabla de funciones) → `wasm-opt` a cada wasm.
+`wasm-bindgen --keep-lld-exports` sobre el principal (el trozo importa su tabla de funciones) → `wasm-opt` a cada wasm →
+`scripts/comprimir.mjs`, que deja junto a cada wasm y dato su `.br` (brotli 11) y su `.gz`: bff los entrega tal cual y no comprime en cada build.
 
 ## Publicar una versión
 
