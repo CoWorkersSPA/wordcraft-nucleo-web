@@ -3,7 +3,7 @@
 # `wordcraft-web-core` y lo parte con wasm-split: el módulo principal trae la vista (abrir y pintar un .docx, para el primer
 # pintado) y el trozo `split_editor.wasm`, el motor de edición, que se pide al crear el primer `Editor` sin repetir lo que ya
 # trajo la vista. Deja en salida/ un .tar.gz con eso (wasm + JS + tipos) y los datos que se piden por nombre (fuentes,
-# guionado, diccionario), más su suma SHA-256.
+# guionado, diccionario) y la versión comprimida (.br y .gz) de cada wasm y dato, más su suma SHA-256.
 #
 #   scripts/construir.sh <versión>        p. ej. scripts/construir.sh 0.9.0-1
 #
@@ -89,6 +89,9 @@ cp "$codigo"/assets/hyphenation/en-us.dic "$codigo"/assets/hyphenation/en-us.pat
 mkdir -p "$paquete/datos/dic"
 cp "$raiz"/datos/dic/es-CL.aff "$raiz"/datos/dic/es-CL.dic "$raiz"/datos/dic/LICENCIA-es-CL.txt "$raiz"/datos/dic/ORIGEN.md "$paquete/datos/dic/"
 cp "$raiz/LICENCIA.md" "$paquete/LICENCIA.md"
+
+echo "→ comprimiendo (brotli y gzip junto a cada wasm y dato, para que bff no lo haga en cada build)"
+node "$raiz/scripts/comprimir.mjs" "$paquete"
 
 node "$raiz/scripts/manifiesto.mjs" "$paquete" "$version" "$REPO" "$COMMIT" "$wbg"
 
