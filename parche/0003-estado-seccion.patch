@@ -1,7 +1,8 @@
 diff --git a/crates/web-core/src/lib.rs b/crates/web-core/src/lib.rs
+index 0eb48365..f4fabba9 100644
 --- a/crates/web-core/src/lib.rs
 +++ b/crates/web-core/src/lib.rs
-@@ -214,7 +214,18 @@
+@@ -214,7 +214,18 @@ impl Editor {
                  _ => "other",
              },
          };

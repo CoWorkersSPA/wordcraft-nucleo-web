@@ -1,8 +1,8 @@
 diff --git a/crates/fonts/src/word.rs b/crates/fonts/src/word.rs
-index 69a7034..7145bc2 100644
+index 58cac891..043f1bea 100644
 --- a/crates/fonts/src/word.rs
 +++ b/crates/fonts/src/word.rs
-@@ -280,6 +280,27 @@ fn is_hebrew(f: &str) -> bool {
+@@ -339,6 +339,27 @@ fn is_hebrew(f: &str) -> bool {
      NAMES.contains(&f) || f.contains("hebrew")
  }
  
@@ -30,7 +30,7 @@ index 69a7034..7145bc2 100644
  /// The first installed substitute for a missing `family`. For a Thai font, the first with Latin
  /// letters and digits as well as Thai ones (a Thai face without Latin would leave a mixed run in
  /// two fonts, #1549), else the first with Thai letters, else the first installed.
-@@ -346,6 +367,8 @@ pub fn resolve(family: &str, bold: bool, italic: bool) -> Resolved {
+@@ -405,6 +426,8 @@ pub fn resolve(family: &str, bold: bool, italic: bool) -> Resolved {
          // Windows maps the charset names to the font itself: not a substitution.
          (base.to_string(), false)
      } else {
