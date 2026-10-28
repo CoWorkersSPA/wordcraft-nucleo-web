@@ -1,0 +1,26 @@
+diff --git a/crates/web-core/src/motor.rs b/crates/web-core/src/motor.rs
+index d37858e..9f7c1b9 100644
+--- a/crates/web-core/src/motor.rs
++++ b/crates/web-core/src/motor.rs
+@@ -163,7 +163,21 @@ impl Edicion {
+         };
+         // La sección del cursor (en puntos): lo que dibujan las reglas y lo que lee «Primera página diferente».
+         let sec = self.session.run("layout.section", &json!({})).unwrap_or(Value::Null);
++        // La imagen (o forma) seleccionada, para la pestaña contextual: tamaño y colocación en puntos.
++        let picture = wordcraft_engine::cmd::objects::selected(&self.session).and_then(|(_, o)| {
++            let (w, h, fl) = o.frame()?;
++            let (kind, crop) = match &o {
++                wordcraft_engine::doc::InlineObject::Image { crop, .. } => ("image", Some(*crop)),
++                _ => ("shape", None),
++            };
++            Some(json!({
++                "kind": kind, "w": w, "h": h, "crop": crop, "alt": o.alt_text(),
++                "wrap": format!("{:?}", fl.wrap).to_lowercase(), "rot": fl.rot, "flipH": fl.flip_h, "flipV": fl.flip_v,
++                "x": fl.x, "y": fl.y, "floating": o.is_floating(),
++            }))
++        });
+         json!({
++            "picture": picture,
+             "section": {
+                 "pageW": sec["pageW"],
+                 "pageH": sec["pageH"],

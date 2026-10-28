@@ -20,6 +20,8 @@ egui. Se compila con SIMD128.
   serif, el guionado y el diccionario inglés bajo demanda (`add_data_file`): no bloquean el arranque.
 - `parche/0005-nucleo-partido.patch`: `wordcraft-web-core` pasa a ser el wasm único: reexporta la vista y deja el motor de
   edición (`src/motor.rs`) detrás del punto de corte `#[wasm_split(editor)]`.
+- `parche/0006-estado-imagen.patch`: `state()` trae `picture` (tamaño, recorte, giro, volteo, ajuste, posición y texto alternativo de la imagen
+  seleccionada; `null` si no hay), para la pestaña contextual «Formato de imagen».
 - `scripts/construir.sh <versión>`: clona, aplica el parche, compila, parte con wasm-split y empaqueta en `salida/`.
 - `scripts/probar.mjs <carpeta del paquete>`: prueba de humo en Node (lo que lee la interfaz de `Editor.state()` y los comandos que lo mueven); el CI la corre sobre cada paquete.
 - `.github/workflows/ci.yml`: lo mismo en CI; con una etiqueta `v<versión>-<n>` publica una release.
