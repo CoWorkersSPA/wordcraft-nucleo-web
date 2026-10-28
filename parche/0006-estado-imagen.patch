@@ -1,14 +1,16 @@
 diff --git a/crates/web-core/src/motor.rs b/crates/web-core/src/motor.rs
-index d37858e..9f7c1b9 100644
+index d37858e..eb42f21 100644
 --- a/crates/web-core/src/motor.rs
 +++ b/crates/web-core/src/motor.rs
-@@ -163,7 +163,21 @@ impl Edicion {
+@@ -163,7 +163,24 @@ impl Edicion {
          };
          // La sección del cursor (en puntos): lo que dibujan las reglas y lo que lee «Primera página diferente».
          let sec = self.session.run("layout.section", &json!({})).unwrap_or(Value::Null);
 +        // La imagen (o forma) seleccionada, para la pestaña contextual: tamaño y colocación en puntos.
-+        let picture = wordcraft_engine::cmd::objects::selected(&self.session).and_then(|(_, o)| {
++        let picture = wordcraft_engine::cmd::objects::selected(&self.session).and_then(|(pos, o)| {
 +            let (w, h, fl) = o.frame()?;
++            // Dónde quedó en la página (el marco sin girar), para dibujar el recuadro de selección.
++            let hit = self.session.layout().find_object(self.session.page_hint, |h| h.pos() == pos && h.text_box.is_none());
 +            let (kind, crop) = match &o {
 +                wordcraft_engine::doc::InlineObject::Image { crop, .. } => ("image", Some(*crop)),
 +                _ => ("shape", None),
@@ -17,6 +19,7 @@ index d37858e..9f7c1b9 100644
 +                "kind": kind, "w": w, "h": h, "crop": crop, "alt": o.alt_text(),
 +                "wrap": format!("{:?}", fl.wrap).to_lowercase(), "rot": fl.rot, "flipH": fl.flip_h, "flipV": fl.flip_v,
 +                "x": fl.x, "y": fl.y, "floating": o.is_floating(),
++                "page": hit.as_ref().map(|h| h.page), "rect": hit.as_ref().map(|h| [h.rect.x, h.rect.y, h.rect.w, h.rect.h]),
 +            }))
 +        });
          json!({
