@@ -78,7 +78,7 @@ index d37858e..a5b378b 100644
 +            }))
 +        });
 +        // La tabla del cursor, para el panel «Formato de tabla»: forma, celda actual, estilo y opciones, ancho de la columna.
-+        let story = self.session.sel.focus.story;
++        let foco = self.session.sel.focus.story;
 +        let layout = self.session.layout();
 +        let table = self.session.sel.focus.path.cell().and_then(|(tp, r, c)| {
 +            // Dónde se dibuja: la tabla por página (la unión de sus celdas) y la celda del cursor, para el recuadro de selección.
@@ -87,7 +87,7 @@ index d37858e..a5b378b 100644
 +                let mut hull: Option<[f32; 4]> = None;
 +                for it in &pg.items {
 +                    let wordcraft_engine::layout::Placed::Cell { rect, table, row, cell, story: st, covered: false, .. } = it else { continue };
-+                    if *st != story || *table != tp {
++                    if *st != foco || *table != tp {
 +                        continue;
 +                    }
 +                    let (x1, y1, x2, y2) = (rect.x, rect.y, rect.x + rect.w, rect.y + rect.h);
@@ -105,7 +105,7 @@ index d37858e..a5b378b 100644
 +            }
 +            let frames: Vec<Value> = frames.iter().map(|(pi, f)| json!([pi, f[0], f[1], f[2], f[3]])).collect();
 +            let doc = &self.session.doc;
-+            let t = doc.table(story, &tp)?;
++            let t = doc.table(foco, &tp)?;
 +            let l = &t.props.look;
 +            let styles: Vec<Value> = doc
 +                .styles
