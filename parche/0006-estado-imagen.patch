@@ -23,7 +23,7 @@ index 975baea..fea8a0d 100644
      pub fn caret(&mut self) -> String {
          self.motor.caret()
 diff --git a/crates/web-core/src/motor.rs b/crates/web-core/src/motor.rs
-index d37858e..bbe9d58 100644
+index d37858e..a5b378b 100644
 --- a/crates/web-core/src/motor.rs
 +++ b/crates/web-core/src/motor.rs
 @@ -101,6 +101,17 @@ impl Edicion {
@@ -57,7 +57,7 @@ index d37858e..bbe9d58 100644
      /// `{page, x, top, height}` of the caret, or `null`.
      pub fn caret(&mut self) -> String {
          let layout = self.session.layout();
-@@ -163,7 +180,47 @@ impl Edicion {
+@@ -163,7 +180,74 @@ impl Edicion {
          };
          // La sección del cursor (en puntos): lo que dibujan las reglas y lo que lee «Primera página diferente».
          let sec = self.session.run("layout.section", &json!({})).unwrap_or(Value::Null);
@@ -79,7 +79,31 @@ index d37858e..bbe9d58 100644
 +        });
 +        // La tabla del cursor, para el panel «Formato de tabla»: forma, celda actual, estilo y opciones, ancho de la columna.
 +        let story = self.session.sel.focus.story;
++        let layout = self.session.layout();
 +        let table = self.session.sel.focus.path.cell().and_then(|(tp, r, c)| {
++            // Dónde se dibuja: la tabla por página (la unión de sus celdas) y la celda del cursor, para el recuadro de selección.
++            let (mut frames, mut cell_rect): (Vec<(usize, [f32; 4])>, Option<Value>) = (Vec::new(), None);
++            for (pi, pg) in layout.pages.iter().enumerate() {
++                let mut hull: Option<[f32; 4]> = None;
++                for it in &pg.items {
++                    let wordcraft_engine::layout::Placed::Cell { rect, table, row, cell, story: st, covered: false, .. } = it else { continue };
++                    if *st != story || *table != tp {
++                        continue;
++                    }
++                    let (x1, y1, x2, y2) = (rect.x, rect.y, rect.x + rect.w, rect.y + rect.h);
++                    hull = Some(match hull {
++                        None => [x1, y1, x2, y2],
++                        Some(h) => [h[0].min(x1), h[1].min(y1), h[2].max(x2), h[3].max(y2)],
++                    });
++                    if *row == r && *cell == c {
++                        cell_rect = Some(json!([pi, rect.x, rect.y, rect.w, rect.h]));
++                    }
++                }
++                if let Some(h) = hull {
++                    frames.push((pi, [h[0], h[1], h[2] - h[0], h[3] - h[1]]));
++                }
++            }
++            let frames: Vec<Value> = frames.iter().map(|(pi, f)| json!([pi, f[0], f[1], f[2], f[3]])).collect();
 +            let doc = &self.session.doc;
 +            let t = doc.table(story, &tp)?;
 +            let l = &t.props.look;
@@ -97,6 +121,9 @@ index d37858e..bbe9d58 100644
 +                         "firstColumn": l.first_column, "lastColumn": l.last_column, "bandedColumns": l.banded_columns},
 +                "colWidth": t.grid.get(c), "alt": t.props.description.clone().unwrap_or_default(),
 +                "altTitle": t.props.caption.clone().unwrap_or_default(),
++                "frames": frames, "cellRect": cell_rect,
++                // El ajuste automático que tiene: ancho fijo, a la ventana (100 %), al contenido o ninguno de ellos (medidas propias).
++                "autofit": if t.props.fixed { "fixed" } else if t.props.width_pct == Some(100.0) { "window" } else if t.props.width.is_none() && t.props.width_pct.is_none() { "contents" } else { "custom" },
 +            }))
 +        });
          json!({
@@ -105,7 +132,7 @@ index d37858e..bbe9d58 100644
              "section": {
                  "pageW": sec["pageW"],
                  "pageH": sec["pageH"],
-@@ -233,6 +290,9 @@ impl crate::Motor for Edicion {
+@@ -233,6 +317,9 @@ impl crate::Motor for Edicion {
      fn caret(&mut self) -> String {
          Edicion::caret(self)
      }
