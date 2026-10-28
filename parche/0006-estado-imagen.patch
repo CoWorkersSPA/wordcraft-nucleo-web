@@ -1,8 +1,63 @@
+diff --git a/crates/web-core/src/lib.rs b/crates/web-core/src/lib.rs
+index 975baea..fea8a0d 100644
+--- a/crates/web-core/src/lib.rs
++++ b/crates/web-core/src/lib.rs
+@@ -30,6 +30,7 @@ pub trait Motor {
+     fn render_page(&mut self, page: usize, scale: f32) -> Vec<u8>;
+     fn click(&mut self, page: usize, x: f32, y: f32, extend: bool) -> bool;
+     fn caret(&mut self) -> String;
++    fn object_at(&mut self, page: usize, x: f32, y: f32) -> bool;
+     fn selection_rects(&mut self) -> String;
+     fn state(&mut self) -> String;
+ }
+@@ -117,6 +118,11 @@ impl Editor {
+         self.motor.click(page, x, y, extend)
+     }
+ 
++    /// Whether a picture or shape lies at this point of a page (points).
++    pub fn object_at(&mut self, page: usize, x: f32, y: f32) -> bool {
++        self.motor.object_at(page, x, y)
++    }
++
+     /// `{page, x, top, height}` of the caret, or `null`.
+     pub fn caret(&mut self) -> String {
+         self.motor.caret()
 diff --git a/crates/web-core/src/motor.rs b/crates/web-core/src/motor.rs
-index d37858e..eb42f21 100644
+index d37858e..1753787 100644
 --- a/crates/web-core/src/motor.rs
 +++ b/crates/web-core/src/motor.rs
-@@ -163,7 +163,24 @@ impl Edicion {
+@@ -101,6 +101,17 @@ impl Edicion {
+     pub fn click(&mut self, page: usize, x: f32, y: f32, extend: bool) -> bool {
+         let layout = self.session.layout();
+         let story = self.session.sel.focus.story;
++        // Un clic sobre una imagen la selecciona (en vez de poner el cursor antes o después de ella).
++        let picture = if extend { None } else { layout.object_at_in(page, x, y, 0.0, story).filter(|o| o.text_box.is_none()) };
++        if let Some(o) = picture {
++            let pos = o.pos();
++            let end = wordcraft_engine::doc::Pos { off: pos.off + wordcraft_engine::doc::para::OBJ.len_utf8(), ..pos.clone() };
++            self.session.page_hint = page;
++            self.session.sel = wordcraft_engine::Selection { anchor: pos, focus: end };
++            self.session.close_typing();
++            self.rev += 1;
++            return true;
++        }
+         let Some(pos) = layout.hit(page, x, y, story) else { return false };
+         self.session.page_hint = page;
+         if extend {
+@@ -113,6 +124,12 @@ impl Edicion {
+         true
+     }
+ 
++    /// ¿Hay una imagen o forma en este punto de la página (puntos)? Para el cursor del ratón.
++    pub fn object_at(&mut self, page: usize, x: f32, y: f32) -> bool {
++        let story = self.session.sel.focus.story;
++        self.session.layout().object_at_in(page, x, y, 0.0, story).is_some_and(|o| o.text_box.is_none())
++    }
++
+     /// `{page, x, top, height}` of the caret, or `null`.
+     pub fn caret(&mut self) -> String {
+         let layout = self.session.layout();
+@@ -163,7 +180,24 @@ impl Edicion {
          };
          // La sección del cursor (en puntos): lo que dibujan las reglas y lo que lee «Primera página diferente».
          let sec = self.session.run("layout.section", &json!({})).unwrap_or(Value::Null);
@@ -27,3 +82,13 @@ index d37858e..eb42f21 100644
              "section": {
                  "pageW": sec["pageW"],
                  "pageH": sec["pageH"],
+@@ -233,6 +267,9 @@ impl crate::Motor for Edicion {
+     fn caret(&mut self) -> String {
+         Edicion::caret(self)
+     }
++    fn object_at(&mut self, page: usize, x: f32, y: f32) -> bool {
++        Edicion::object_at(self, page, x, y)
++    }
+     fn selection_rects(&mut self) -> String {
+         Edicion::selection_rects(self)
+     }
