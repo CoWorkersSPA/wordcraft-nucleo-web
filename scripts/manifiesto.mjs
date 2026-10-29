@@ -1,22 +1,16 @@
 // Escribe MANIFEST.json en el paquete: qué contiene, de dónde sale y la suma SHA-256 de cada archivo.
 //   node scripts/manifiesto.mjs <carpeta> <versión> <repo de wordcraft> <commit> <versión de wasm-bindgen>
 import { createHash } from "node:crypto";
-import { readdirSync, readFileSync, statSync, writeFileSync } from "node:fs";
+import { readFileSync, statSync, writeFileSync } from "node:fs";
 import { join, relative } from "node:path";
+import { archivos as listar } from "./archivos.mjs";
 
 const [carpeta, version, repo, commit, wasmBindgen] = process.argv.slice(2);
 if (!carpeta || !version || !repo || !commit) {
   console.error("uso: manifiesto.mjs <carpeta> <versión> <repo> <commit> [wasm-bindgen]");
   process.exit(1);
 }
-const archivos = [];
-(function recorrer(d) {
-  for (const n of readdirSync(d).sort()) {
-    const ruta = join(d, n);
-    if (statSync(ruta).isDirectory()) recorrer(ruta);
-    else if (n !== "MANIFEST.json") archivos.push(ruta);
-  }
-})(carpeta);
+const archivos = listar(carpeta).filter((r) => !r.endsWith("MANIFEST.json"));
 const manifiesto = {
   nombre: "wordcraft-nucleo-web",
   version,
